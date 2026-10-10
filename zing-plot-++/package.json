@@ -1,0 +1,20 @@
+{
+  "name": "zing-plot-plus-plus",
+  "version": "1.0.0",
+  "description": "Scatter and line plots",
+  "homepage": "https://github.com/CSE-210-F26-02/Chart-Project#readme",
+  "bugs": {
+    "url": "https://github.com/CSE-210-F26-02/Chart-Project/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CSE-210-F26-02/Chart-Project.git"
+  },
+  "license": "ISC",
+  "author": "CSE210-Team-2",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
