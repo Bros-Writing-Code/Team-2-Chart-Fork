@@ -20,9 +20,10 @@ function scatter(chartData, x, y, center, centerx, centery, rangeX, rangeY, tick
         tickFont: minDim * 0.022,
         labelFont: minDim * 0.03,
         titleFont: minDim * 0.04,
-        pointRadius: minDim * 0.008,
+        pointRadius: Math.max(minDim * 0.008, 1.5),
         axisStroke: Math.max(minDim * 0.003, 0.5),
-        gridStroke: Math.max(minDim * 0.0015, 0.25)
+        gridStroke: Math.max(minDim * 0.0015, 0.25),
+        gridDash: Math.max(minDim * 0.008, 2)
     };
 
     const margin = { 
@@ -95,7 +96,7 @@ function scatter(chartData, x, y, center, centerx, centery, rangeX, rangeY, tick
     // build svg, check style for possible customization, using class tags for simplicity
     let svg = `<svg width="${x}" height="${y}" viewBox="0 0 ${x} ${y}" xmlns="http://www.w3.org/2000/svg">
         <style>
-            .grid-line { stroke: #e0e0e0; stroke-width: ${sizes.gridStroke}; stroke-dasharray: 4,4; }
+            .grid-line { stroke: #e0e0e0; stroke-width: ${sizes.gridStroke}; stroke-dasharray: ${sizes.gridDash}; }
             .axis-line { stroke: #333; stroke-width: ${sizes.axisStroke}; }
             .axis-text { font-family: sans-serif; font-size: ${sizes.tickFont}px; fill: #555; text-anchor: middle; }
             .label-text { font-family: sans-serif; font-size: ${sizes.labelFont}px; font-weight: bold; fill: #333; text-anchor: middle; }
