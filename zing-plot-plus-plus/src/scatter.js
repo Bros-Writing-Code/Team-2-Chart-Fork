@@ -30,7 +30,7 @@ function scatter(chartData, x, y, center, centerx, centery, rangeX, rangeY, tick
         top: minDim * 0.08, 
         right: minDim * 0.05, 
         bottom: minDim * 0.12, 
-        left: minDim * 0.12 
+        left: minDim * 0.20
     };
 
     // size of actual graph
@@ -124,7 +124,7 @@ function scatter(chartData, x, y, center, centerx, centery, rangeX, rangeY, tick
 
     yTicks.forEach(tick => {
         const py = scaleY(tick);
-        const textX = margin.left - (margin.left * 0.12);
+        const textX = margin.left - (margin.left * 0.30);
         const textY = py + (sizes.tickFont * 0.3);
         svg += `
             <line x1="${margin.left}" y1="${py}" x2="${margin.left + plotWidth}" y2="${py}" class="grid-line" />
