@@ -1,6 +1,7 @@
 const mock_data = [
   { coordinate: [1, 2] },
   { coordinate: [3, 4] },
+  { coordinate: [4, 2] },
   { coordinate: [5, 6] }
 ];
 
@@ -11,4 +12,12 @@ setTimeout(() => {
         "y-axis-label": "Y",
         points: mock_data
     }, 500, 500, { x: 250, y: 250 }, 0, 0, 10, 10, 5);
+
+    document.getElementById("my-line-plot").setChartProperties({
+        title: "Test Line Plot",
+        "x-axis-label": "X",
+        "y-axis-label": "Y",
+        points: mock_data
+    }, 500, 500, { x: 250, y: 250 }, 0, 0, 10, 10, 5);
+
 }, 1000);
