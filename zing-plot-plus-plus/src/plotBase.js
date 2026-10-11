@@ -28,7 +28,7 @@
  * 
  * @extends HTMLElement
  */
-class ScatterPlot extends HTMLElement {
+class PlotBaseElement extends HTMLElement {
 
 
   /**
@@ -436,6 +436,7 @@ class ScatterPlot extends HTMLElement {
     const minDim = Math.min(this._width, this._height);
     circles.forEach((circle) => {
       circle.addEventListener('mouseenter', () => {
+        function follow() {
         const rect = circle.getBoundingClientRect();
         const xValue = circle.getAttribute('data-x');
         const yValue = circle.getAttribute('data-y');
@@ -447,6 +448,19 @@ class ScatterPlot extends HTMLElement {
         tooltip.setAttribute('y-position', `${rect.top + scrollY}`);
         tooltip.setAttribute('visible', 'true');
         tooltip.setAttribute('font-size', `${minDim * 0.02}px`);
+        window.__followRaf = requestAnimationFrame(follow);
+        }
+        follow();
+      });
+    });
+
+    circles.forEach((circle) => {
+      circle.addEventListener('mouseleave', () => {
+        clearTimeout(window.__tooltipTimeout);
+        window.__tooltipTimeout = setTimeout(() => {
+          cancelAnimationFrame(window.__followRaf);
+          tooltip.setAttribute('visible', 'false');
+        }, 500);
       });
     });
   }
@@ -534,7 +548,7 @@ class ToolTipModal extends HTMLElement {
         }
 
         .tooltip {
-          position: relative;
+          position: absolute;
           background-color: #fff;
           color: #000;
           width: max-content;
@@ -567,8 +581,12 @@ class ToolTipModal extends HTMLElement {
         <p class="tooltip-value">Y: <span id="tooltip-y" class="tooltip-value"></span></p>
       </div>
     `;
+    this.shadowDOM.querySelector('.tooltip').addEventListener('mouseenter', () => {
+      clearTimeout(window.__tooltipTimeout);
+    });
     this.shadowDOM.querySelector('.tooltip').addEventListener('mouseleave', () => {
        this.setAttribute('visible', 'false');
+       cancelAnimationFrame(window.__followRaf);
     });
   }
 }
