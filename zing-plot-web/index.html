@@ -12,6 +12,7 @@
 
     <link rel="stylesheet" href="style.css" />
     <script src="script.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/zing-plot-plus-plus@1.0.3/src/components.js" type="module" defer></script>
 
     <style>
   /*  change layout width and height */
@@ -34,6 +35,7 @@
   </head>
 
   <body>
+    <tool-tip-modal id="my-tooltip" x-coordinate="0" y-coordinate="300" x-position="100" y-position="200" visible="false"></tool-tip-modal>
     <!-- Shared SVG icons. Reference each icon using its ID. -->
     <svg class="symbols" aria-hidden="true">
       <defs>
@@ -298,14 +300,13 @@
               </button>
             </div>
           </div>
-
           <div class="chart-container">
-            <svg
+            <!-- <svg
               id="chart"
               viewBox="0 0 634 710"
               role="img"
               aria-label="Sales Over Time line chart"
-            ></svg>
+            ></svg> -->
           </div>
         </section>
       </div>
