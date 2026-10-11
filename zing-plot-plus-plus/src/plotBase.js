@@ -447,7 +447,7 @@ class PlotBaseElement extends HTMLElement {
         tooltip.setAttribute('x-position', `${rect.left + scrollX}`);
         tooltip.setAttribute('y-position', `${rect.top + scrollY}`);
         tooltip.setAttribute('visible', 'true');
-        tooltip.setAttribute('font-size', `${minDim * 0.02  }px`);
+        tooltip.setAttribute('font-size', `${(minDim * 0.02).toFixed(1)}px`);
         window.__followRaf = requestAnimationFrame(follow);
         }
         follow();
@@ -545,7 +545,7 @@ class ToolTipModal extends HTMLElement {
 
         :host {
           --font-size: 10px;
-          --font-family: sans-serif;
+          --font-family: Arial, Helvetica, sans-serif;
         }
 
         .tooltip {
@@ -573,8 +573,8 @@ class ToolTipModal extends HTMLElement {
 
         .tooltip-value {
           font-weight: bold;
-          font-size: var(--font-size);
-          font-family: var(--font-family);
+          font-size: var(--font-size, 10px);
+          font-family: var(--font-family, Arial, Helvetica, sans-serif);
         }
       </style>
       <div class="tooltip">
