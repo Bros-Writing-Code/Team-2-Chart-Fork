@@ -13,9 +13,9 @@
   "license": "ISC",
   "author": "CSE210-Team-2",
   "type": "module",
-  "main": "src/index.js",
+  "main": "src/components.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/index.js"
+    "start": "node src/components.js"
   }
 }

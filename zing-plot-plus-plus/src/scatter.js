@@ -1,18 +1,32 @@
 /**
+ * @typedef {object} Point
+ * @property {Array<number>} coordinate - Array containing the X and Y coordinates of the point
+ */
+
+/**
+ * @typedef {object} ChartData
+ * @property {string} title - The title of the chart
+ * @property {string} "x-axis-label" - The label for the X axis
+ * @property {string} "y-axis-label" - The label for the Y axis
+ * @property {Array<Point>} points - An array of points to display on the chart
+ */
+
+/**
  * Generates a scatter plot contained in an SVG HTML object.
  * 
- * @param {Object} chartData - JSON object following the chart format
+ * @param {ChartData} chartData - JSON object following the chart format
  * @param {number} x - Width of the component
  * @param {number} y - Height of the component
  * @param {boolean} center - If true, chart frame is fixed by a center point. If false, fixed by left-bottom corner.
- * @param {number} centerX - Anchor coordinate X.
- * @param {number} centerY - Anchor coordinate Y.
+ * @param {number} centerX - Anchor coordinate X (e.g., what the value of the center/left of the X axis is).
+ * @param {number} centerY - Anchor coordinate Y (e.g., what the value of the center/bottom of the Y axis is).
  * @param {number} rangeX - Range of displayed X values.
  * @param {number} rangeY - Range of displayed Y values.
  * @param {number} ticks - Number of displayed tick values per axis, result may have slightly less or more ticks due to rounding
  * @returns {string} - An SVG string component containing the chart.
  */
 function scatter(chartData, x, y, center, centerx, centery, rangeX, rangeY, ticks) {
+
     const minDim = Math.min(x, y);
 
     // sizes of various graph components as a % of SVG size, can change parameters
@@ -155,9 +169,11 @@ function scatter(chartData, x, y, center, centerx, centery, rangeX, rangeY, tick
     svg += `<g clip-path="url(#plot-clip)">`;
     chartData.points.forEach(p => {
         const [px, py] = p.coordinate;
-        svg += `<circle cx="${scaleX(px)}" cy="${scaleY(py)}" r="${sizes.pointRadius}" class="point" />`;
+        svg += `<circle cx="${scaleX(px)}" cy="${scaleY(py)}" r="${sizes.pointRadius}" data-x="${px}" data-y="${py}" class="point" />`;
     });
     svg += `</g></svg>`;
 
     return svg;
 }
+
+export default scatter;
