@@ -3,30 +3,20 @@
   box-sizing: border-box;
 }
 
-/* Define the global font, colors, and overall page scale here. */
+/* Define the global font and the single muted accent color. */
 :root {
-  --purple: #be4fd1;
+  --purple: #51405F;
 
   font-family: Arial, Helvetica, sans-serif;
-  color: #be4fd1;
+  color: #27232B;
   background: #D0B7E5;
 }
 
+/* Preserve the original lavender page background. */
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(
-      ellipse at 22% 5%,
-      #D0B7E5 0,
-      transparent 52%
-    ),
-    linear-gradient(
-      115deg,
-      #D0B7E5,
-      #D0B7E5 65%,
-      #D0B7E5
-    );
+  background: #D0B7E5;
 }
 
 /* Hide the shared SVG definitions while keeping their icons available. */
@@ -49,11 +39,11 @@ button {
   color: inherit;
 }
 
-/* Show a visible focus indicator for keyboard navigation. */
+/* Use the accent color to indicate keyboard focus. */
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid #be4fd1;
+  outline: 3px solid #51405F;
   outline-offset: 3px;
 }
 
@@ -77,32 +67,21 @@ svg {
   flex-shrink: 0;
 }
 
-/* Center and visually scale the page without changing its layout space. */
+/* Keep the existing page dimensions and horizontal alignment. */
 .app {
   padding: 25px 29px 23px;
   max-width: 1600px;
   margin: 0 auto;
 }
 
-/* Style the title banner and its background. */
+/* Use a neutral header surface with a subtle gray shadow. */
 .hero {
   height: 196px;
   border-radius: 19px;
-  background:
-    radial-gradient(
-      ellipse at 12% 0,
-      #343f92,
-      transparent 65%
-    ),
-    linear-gradient(
-      110deg,
-      #303276,
-      #302254 65%,
-      #39246b
-    );
+  background: #F3F0F4;
   box-shadow:
-    0 4px 9px #D0B7E5,
-    inset 0 0 2px 2px #8d6ac7;
+    0 4px 9px rgba(39, 35, 43, 0.06),
+    inset 0 0 2px 2px #DDD8DF;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -116,26 +95,26 @@ svg {
   font-weight: 800;
   letter-spacing: -2px;
   line-height: 1.08;
-  color: #faf7ff;
+  color: #27232B;
   position: relative;
   display: flex;
   align-items: center;
   gap: 25px;
   margin: 0 0 17px;
-  text-shadow: 0 3px 2px #20154c55;
+  text-shadow: none;
   white-space: nowrap;
 }
 
 .hero p {
   font-size: 28px;
-  color: #D0B7E5;
+  color: #756F79;
   margin: 0;
   position: relative;
   letter-spacing: -0.6px;
   white-space: nowrap;
 }
 
-/* Build the three-bar logo using the header's decorative elements. */
+/* Use neutral gray tones for the three-bar logo. */
 .brand-icon {
   display: flex;
   align-items: flex-end;
@@ -146,25 +125,25 @@ svg {
 .brand-icon i {
   width: 19px;
   height: 44px;
-  background: linear-gradient(#D0B7E5, #9950f6);
+  background: #817985;
   border-radius: 7px;
-  box-shadow: 0 2px 6px #492379;
+  box-shadow: none;
 }
 
 .brand-icon i:nth-child(2) {
   height: 64px;
-  background: linear-gradient(#D0B7E5, #9859ff);
+  background: #756F79;
 }
 
 .brand-icon i:nth-child(3) {
   height: 80px;
-  background: linear-gradient(#d2f4ff, #8518ce);
+  background: #27232B;
 }
 
-/* Position the decorative circles inside the title banner. */
+/* Keep header decorations subtle using closely related neutral tones. */
 .orb {
   position: absolute;
-  background: linear-gradient(140deg, #8518ce, #D0B7E5);
+  background: #E7E3E9;
   border-radius: 50%;
 }
 
@@ -180,7 +159,7 @@ svg {
   height: 188px;
   left: -124px;
   top: 39px;
-  background: #aa84f58c;
+  background: #DDD8DF80;
 }
 
 .three {
@@ -188,7 +167,7 @@ svg {
   height: 330px;
   right: -159px;
   top: -194px;
-  background: #6538bdb0;
+  background: #E2DEE5;
 }
 
 .four {
@@ -196,7 +175,7 @@ svg {
   height: 160px;
   right: -94px;
   bottom: -65px;
-  background: #D0B7E5;
+  background: #ECE9EE;
 }
 
 .dots {
@@ -206,7 +185,7 @@ svg {
   font-size: 27px;
   letter-spacing: 14px;
   line-height: 25px;
-  color: #9b65e5;
+  color: #B8B1BD;
 }
 
 /* Place the settings panel and chart preview side by side on desktop. */
@@ -217,8 +196,9 @@ svg {
   margin-top: 18px;
 }
 
+/* Use an opaque off-white surface for the main panels. */
 .panel {
-  background: linear-gradient(130deg, #fcfcffef, #f7f6ffef);
+  background: #FAF9FA;
   border-radius: 20px;
   padding: 16px;
   min-width: 0;
@@ -228,14 +208,15 @@ svg {
   padding: 16px 20px 18px;
 }
 
-/* Style the main chart-type selector and its active state. */
+/* Use neutral borders and surfaces for the chart-type selector. */
 .type-tabs {
   display: flex;
-  border: 4px solid #D0B7E5;
+  border: 4px solid #DDD8DF;
   border-radius: 17px;
   height: 79px;
   padding: 0;
   margin-bottom: 16px;
+  background: #F4F2F4;
 }
 
 .type-tab {
@@ -245,20 +226,20 @@ svg {
   justify-content: center;
   gap: 25px;
   background: transparent;
+  color: #27232B;
   font-size: 28px;
   font-weight: 700;
   border-radius: 14px;
   white-space: nowrap;
 }
 
+/* Reserve the muted purple accent for selected tabs and primary actions. */
 .type-tab.active,
 .generate,
 .save {
-  background: linear-gradient(115deg, #be4fd1, #be4fd1 63%, #be4fd1);
-  color: white;
-  box-shadow:
-    inset 0 1px 2px #b699ff,
-    0 3px 7px #D0B7E5;
+  background: #51405F;
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(39, 35, 43, 0.06);
 }
 
 .type-tab svg {
@@ -271,15 +252,15 @@ svg {
   display: grid;
   grid-template-columns: 1.08fr 1fr;
   gap: 20px;
-  border: 1px solid #D0B7E5;
+  border: 1px solid #DDD8DF;
   border-radius: 17px;
   padding: 19px 21px 8px;
-  background: #f8f7ff66;
+  background: #F4F2F4;
 }
 
 .manual {
   padding-right: 19px;
-  border-right: 1px solid #D0B7E5;
+  border-right: 1px solid #DDD8DF;
   min-width: 0;
 }
 
@@ -293,22 +274,24 @@ svg {
   white-space: nowrap;
   margin: 0 0 16px;
   height: 43px;
+  color: #27232B;
 }
 
 .input-card h2 svg {
-  color: #8518ce;
+  color: #817985;
   width: 36px;
   height: 42px;
   stroke-width: 4;
 }
 
-/* Control the appearance and spacing of manual data fields. */
+/* Keep labels and entered values readable using charcoal text. */
 .manual label {
   display: block;
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.5px;
   margin: 17px 0 8px;
+  color: #27232B;
 }
 
 .manual label:first-of-type {
@@ -318,11 +301,11 @@ svg {
 .manual input,
 .manual textarea {
   width: 100%;
-  border: 2px solid #D0B7E5;
+  border: 2px solid #DDD8DF;
   border-radius: 9px;
-  background: #ffffffc9;
+  background: #FFFFFF;
   padding: 6px 14px;
-  color: #8518ce;
+  color: #27232B;
   font-size: 20px;
   line-height: 25px;
   display: block;
@@ -343,10 +326,11 @@ svg {
   min-height: 41px;
 }
 
+/* Use a softer gray for supporting instructions. */
 .help {
   font-size: 16px;
   line-height: 20px;
-  color: #8518ce;
+  color: #756F79;
   margin: 5px 0 0;
 }
 
@@ -367,13 +351,13 @@ svg {
 .upload-description {
   font-size: 20px;
   line-height: 25px;
-  color: #8518ce;
+  color: #756F79;
   margin: 14px 0 26px;
   letter-spacing: -0.4px;
 }
 
 .drop-zone {
-  border: 2px dashed #D0B7E5;
+  border: 2px dashed #DDD8DF;
   border-radius: 14px;
   height: 405px;
   text-align: center;
@@ -381,20 +365,20 @@ svg {
   flex-direction: column;
   align-items: center;
   padding: 65px 9px 20px;
-  background: #fbfaff60;
+  background: #FAF9FA;
   cursor: pointer;
 }
 
-/* Highlight the upload area when a file is dragged over it. */
+/* Highlight a file drag with the same accent used by primary buttons. */
 .drop-zone.dragging {
-  background: #D0B7E5;
-  border-color: #8518ce;
+  background: #F4F2F4;
+  border-color: #51405F;
 }
 
 .cloud {
   width: 95px;
   height: 95px;
-  stroke: #be4fd1;
+  stroke: #817985;
   stroke-width: 7;
   margin-bottom: 12px;
 }
@@ -403,14 +387,16 @@ svg {
   font-size: 20px;
   letter-spacing: -0.7px;
   white-space: nowrap;
+  color: #27232B;
 }
 
 .drop-zone > span {
   font-size: 20px;
-  color: #7954ff;
+  color: #756F79;
   margin-top: 7px;
 }
 
+/* Keep the file picker visually secondary to Generate Chart. */
 .choose {
   display: flex;
   align-items: center;
@@ -420,11 +406,11 @@ svg {
   height: 60px;
   border-radius: 12px;
   margin-top: 29px;
-  background: linear-gradient(100deg, #D0B7E5, #D0B7E5);
-  border: 1px solid #D0B7E5;
+  background: #E7E3E9;
+  border: 1px solid #DDD8DF;
   font-size: 23px;
   font-weight: 700;
-  color: #8518ce;
+  color: #27232B;
 }
 
 .choose svg {
@@ -434,7 +420,7 @@ svg {
 
 .drop-zone small {
   font-size: 18px;
-  color: #8518ce;
+  color: #756F79;
   margin-top: 24px;
   max-width: 100%;
   overflow-wrap: anywhere;
@@ -452,7 +438,7 @@ svg {
   font-size: 30px;
   font-weight: 700;
   margin-top: 9px;
-  border: 3px solid #D0B7E5;
+  border: 3px solid #DDD8DF;
 }
 
 .generate svg {
@@ -475,6 +461,7 @@ svg {
   letter-spacing: -1.4px;
   white-space: nowrap;
   margin: 0 0 0 6px;
+  color: #27232B;
 }
 
 .preview-actions {
@@ -494,7 +481,8 @@ svg {
   padding: 9px 10px;
   border-radius: 9px;
   white-space: nowrap;
-  background: #D0B7E5;
+  background: #F4F2F4;
+  color: #756F79;
 }
 
 .preview-actions button svg {
@@ -503,22 +491,24 @@ svg {
   stroke-width: 3;
 }
 
+/* Distinguish the active preview mode with a subtle interactive highlight. */
 .preview-actions .selected {
-  background: #D0B7E5;
+  background: #E7E3E9;
+  color: #51405F;
 }
 
 .preview-actions .save {
-  background: linear-gradient(120deg, #be4fd1, #be4fd1 63%, #be4fd1);
-  color: white;
+  background: #51405F;
+  color: #FFFFFF;
   padding: 9px 13px;
   margin-left: 1px;
 }
 
 /* Preserve the chart's proportions and override the default icon styles. */
 .chart-container {
-  border: 1px solid #D0B7E5;
+  border: 1px solid #DDD8DF;
   border-radius: 14px;
-  background: #ffffffd9;
+  background: #FFFFFF;
   overflow: hidden;
   aspect-ratio: 634 / 710;
   min-height: 0;
@@ -533,15 +523,15 @@ svg {
   fill: none;
 }
 
-/* Display status messages and highlight validation errors. */
+/* Display status messages and emphasize errors using the existing accent. */
 #message {
   margin: 8px 3px;
   font-size: 16px;
-  color: #8518ce;
+  color: #756F79;
 }
 
 #message.error {
-  color: #b41c5a;
+  color: #51405F;
 }
 
 /* Reduce component sizes proportionally on compact desktop screens. */
@@ -818,7 +808,7 @@ svg {
   }
 
   .upload {
-    border-top: 1px solid #d7caff;
+    border-top: 1px solid #DDD8DF;
     padding-top: 18px;
   }
 
