@@ -462,23 +462,23 @@ function renderChart() {
     const containerWidth = chartContainer.offsetWidth;
     const containerHeight = chartContainer.offsetHeight;
     if (chartType === "line") {
-      /* TODO: Implement line chart rendering */
+      chart = document.createElement('line-plot');
     } else {
       chart = document.createElement('scatter-plot');
-      chart.setChartProperties({
-        "title": dataset.title,
-        "x-axis-label": dataset.xLabel,
-        "y-axis-label": dataset.yLabel,
-        "points": dataset.x.map((x, i) => ({ coordinate: [x, dataset.y[i]] }))
-      }, containerWidth,
-        containerHeight,
-        false, 0, 0,
-        Math.max(...dataset.x) + (Math.max(...dataset.x) - Math.min(...dataset.x)) * 0.1,
-        Math.max(...dataset.y) + (Math.max(...dataset.y) - Math.min(...dataset.y)) * 0.1,
-        10);
-      chart.id = "chart";
-      chartContainer.appendChild(chart);
     }
+    chart.setChartProperties({
+      "title": dataset.title,
+      "x-axis-label": dataset.xLabel,
+      "y-axis-label": dataset.yLabel,
+      "points": dataset.x.map((x, i) => ({ coordinate: [x, dataset.y[i]] }))
+    }, containerWidth,
+      containerHeight,
+      false, 0, 0,
+      Math.max(...dataset.x) + (Math.max(...dataset.x) - Math.min(...dataset.x)) * 0.1,
+      Math.max(...dataset.y) + (Math.max(...dataset.y) - Math.min(...dataset.y)) * 0.1,
+      10);
+    chart.id = "chart";
+    chartContainer.appendChild(chart);
   } catch (error) {
     console.error("Error rendering chart:", error);
     notify("Could not render the chart. Please try again.", true);
