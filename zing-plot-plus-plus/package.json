@@ -1,6 +1,6 @@
 {
   "name": "zing-plot-plus-plus",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Scatter and line plots",
   "homepage": "https://github.com/CSE-210-F26-02/Chart-Project#readme",
   "bugs": {
@@ -13,9 +13,9 @@
   "license": "ISC",
   "author": "CSE210-Team-2",
   "type": "module",
-  "main": "src/index.js",
+  "main": "src/components.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/index.js"
+    "start": "node src/components.js"
   }
 }
