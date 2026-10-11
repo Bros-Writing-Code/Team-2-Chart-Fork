@@ -11,6 +11,9 @@ let dataset = {
   y: [1, 3, 4, 6, 5, 8],
 };
 
+let prevWidth = window.innerWidth;
+let prevHeight = window.innerHeight;
+
 // Escape user-provided text before inserting it into SVG markup.
 function escapeXML(value) {
   const entities = {
@@ -130,14 +133,8 @@ function setType(type) {
     );
     button.setAttribute("aria-pressed", String(selected));
   });
-
-  // Render chart based on selected type
-  //   if (chartType === "line") {
-  //     LineChart(dataset);
-  //   } else {
-  //     ScatterChart(dataset);
-  //   }
-  }
+  renderChart();
+}
 
 // Parse CSV columns while supporting quoted fields and optional headers.
 function parseCSV(text) {
@@ -212,9 +209,9 @@ function parseCSV(text) {
     y: rows.map((row) => row[yIndex]),
     ...(headers
       ? {
-          xLabel: headers[xIndex],
-          yLabel: headers[yIndex],
-        }
+        xLabel: headers[xIndex],
+        yLabel: headers[yIndex],
+      }
       : {}),
   };
 }
@@ -252,8 +249,8 @@ function parseJSON(text) {
       (
         Array.isArray(points)
           ? points.map(
-              (point) => Array.isArray(point) ? point[0] : point.x
-            )
+            (point) => Array.isArray(point) ? point[0] : point.x
+          )
           : undefined
       ),
     y:
@@ -262,8 +259,8 @@ function parseJSON(text) {
       (
         Array.isArray(points)
           ? points.map(
-              (point) => Array.isArray(point) ? point[1] : point.y
-            )
+            (point) => Array.isArray(point) ? point[1] : point.y
+          )
           : undefined
       ),
   };
@@ -297,13 +294,7 @@ async function importFile(file) {
     });
     updateForm(dataset);
     $("file-status").textContent = file.name;
-
-    // Render chart based on current type
-    // if (chartType === "line") {
-    //   LineChart(dataset);
-    // } else {
-    //   ScatterChart(dataset);
-    // }
+    renderChart();
     notify(
       `Loaded ${dataset.x.length} data points from ${file.name}.`
     );
@@ -324,13 +315,7 @@ function handleGenerateChart(event) {
   event.preventDefault();
   try {
     dataset = readForm();
-
-    // Render chart based on selected type
-    //   if (chartType === "line") {
-    //     LineChart(dataset);
-    //   } else {
-    //     ScatterChart(dataset);
-    //   }
+    renderChart();
     notify("");
     const button = document.querySelector(".generate");
     const originalContent = button.innerHTML;
@@ -351,7 +336,9 @@ async function handleSaveChart() {
   button.disabled = true;
   try {
     // BACKEND HOOK: add cloud storage or a server export request here.
-    const svg = $("chart").cloneNode(true);
+    const chartComponent = $("chart");
+    // Clone the SVG element to avoid modifying the original.
+    const svg = chartComponent.shadowRoot.querySelector("svg").cloneNode(true);
     svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
     svg.setAttribute("width", "1268");
     svg.setAttribute("height", "1420");
@@ -395,7 +382,7 @@ async function handleSaveChart() {
     } finally {
       URL.revokeObjectURL(svgURL);
     }
-  } catch {
+  } catch (error) {
     notify("Could not save the chart. Please try again.", true);
   } finally {
     button.disabled = false;
@@ -448,12 +435,56 @@ function bindEvents() {
     });
   }
 }
+
+let windowResizeTimeout;
+window.addEventListener("resize", () => {
+  clearTimeout(windowResizeTimeout);
+  windowResizeTimeout = setTimeout(() => {
+    if (window.innerWidth !== prevWidth || window.innerHeight !== prevHeight) {
+      prevWidth = window.innerWidth;
+      prevHeight = window.innerHeight;
+      renderChart();
+    }
+  }, 250);
+});
+
+
+function renderChart() {
+  try {
+    let chart;
+    const chartContainer = document.querySelector('.chart-container');
+
+    /* Remove any existing chart from the container */
+    while (chartContainer.firstChild) {
+      chartContainer.removeChild(chartContainer.firstChild);
+    }
+
+    const containerWidth = chartContainer.offsetWidth;
+    const containerHeight = chartContainer.offsetHeight;
+    if (chartType === "line") {
+      /* TODO: Implement line chart rendering */
+    } else {
+      chart = document.createElement('scatter-plot');
+      chart.setChartProperties({
+        "title": dataset.title,
+        "x-axis-label": dataset.xLabel,
+        "y-axis-label": dataset.yLabel,
+        "points": dataset.x.map((x, i) => ({ coordinate: [x, dataset.y[i]] }))
+      }, containerWidth,
+        containerHeight,
+        false, 0, 0,
+        Math.max(...dataset.x) + (Math.max(...dataset.x) - Math.min(...dataset.x)) * 0.1,
+        Math.max(...dataset.y) + (Math.max(...dataset.y) - Math.min(...dataset.y)) * 0.1,
+        10);
+      chart.id = "chart";
+      chartContainer.appendChild(chart);
+    }
+  } catch (error) {
+    console.error("Error rendering chart:", error);
+    notify("Could not render the chart. Please try again.", true);
+  }
+}
+
 // Initialize the controls and display the default chart after the HTML loads.
 bindEvents();
 
-// Render chart based on selected type
-//   if (chartType === "line") {
-//     LineChart(dataset);
-//   } else {
-//     ScatterChart(dataset);
-//   }
