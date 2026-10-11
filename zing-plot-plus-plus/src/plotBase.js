@@ -209,7 +209,7 @@ class PlotBaseElement extends HTMLElement {
     // Implementation in subclasses, see scatterPlot and linePlot.
     // Would use abstract if this was Java, not sure if JS has an equivalent
   }
-  
+
   /**
    * Generates a graph base and outputs it in an SVG HTML object.
    * 
@@ -226,90 +226,90 @@ class PlotBaseElement extends HTMLElement {
    */
 
   generateGraph(chartData, x, y, center, centerx, centery, rangeX, rangeY, ticks) {
-      const minDim = Math.min(x, y);
+    const minDim = Math.min(x, y);
 
-      // TODO: Consolidate size parameters during generation? Update applyPlotElements if so.
+    // TODO: Consolidate size parameters during generation? Update applyPlotElements if so.
 
-      const margin = { 
-          top: minDim * 0.08, 
-          right: minDim * 0.05, 
-          bottom: minDim * 0.12, 
-          left: minDim * 0.20
-      };
+    const margin = {
+      top: minDim * 0.08,
+      right: minDim * 0.05,
+      bottom: minDim * 0.12,
+      left: minDim * 0.20
+    };
 
-      // sizes of various graph components as a % of SVG size, can change parameters
-      const sizes = {
-          // Actual plot dimensions
-          plotWidth: x - margin.left - margin.right,
-          plotHeight: y - margin.top - margin.bottom,
-          // Plot component dimensions
-          tickFont: minDim * 0.022,
-          labelFont: minDim * 0.03,
-          titleFont: minDim * 0.04,
-          pointRadius: Math.max(minDim * 0.008, 1.5),
-          axisStroke: Math.max(minDim * 0.003, 0.5),
-          gridStroke: Math.max(minDim * 0.0015, 0.25),
-          gridDash: Math.max(minDim * 0.008, 2)
-      };
-      
-      // calculate domain of graph
-      let domainMinX, domainMaxX, domainMinY, domainMaxY;
-      if (center === true) {
-          domainMinX = centerx - (rangeX / 2);
-          domainMaxX = centerx + (rangeX / 2);
-          domainMinY = centery - (rangeY / 2);
-          domainMaxY = centery + (rangeY / 2);
-      } else {
-          domainMinX = centerx;
-          domainMaxX = centerx + rangeX;
-          domainMinY = centery;
-          domainMaxY = centery + rangeY;
+    // sizes of various graph components as a % of SVG size, can change parameters
+    const sizes = {
+      // Actual plot dimensions
+      plotWidth: x - margin.left - margin.right,
+      plotHeight: y - margin.top - margin.bottom,
+      // Plot component dimensions
+      tickFont: minDim * 0.022,
+      labelFont: minDim * 0.03,
+      titleFont: minDim * 0.04,
+      pointRadius: Math.max(minDim * 0.008, 1.5),
+      axisStroke: Math.max(minDim * 0.003, 0.5),
+      gridStroke: Math.max(minDim * 0.0015, 0.25),
+      gridDash: Math.max(minDim * 0.008, 2)
+    };
+
+    // calculate domain of graph
+    let domainMinX, domainMaxX, domainMinY, domainMaxY;
+    if (center === true) {
+      domainMinX = centerx - (rangeX / 2);
+      domainMaxX = centerx + (rangeX / 2);
+      domainMinY = centery - (rangeY / 2);
+      domainMaxY = centery + (rangeY / 2);
+    } else {
+      domainMinX = centerx;
+      domainMaxX = centerx + rangeX;
+      domainMinY = centery;
+      domainMaxY = centery + rangeY;
+    }
+
+    // Data point -> graph point functions, change these if we want to use a different scale (e.g logarithmic)
+    const scaleX = (val) => margin.left + ((val - domainMinX) / rangeX) * sizes.plotWidth;
+    const scaleY = (val) => margin.top + sizes.plotHeight - ((val - domainMinY) / rangeY) * sizes.plotHeight;
+
+    //add tick lines
+    const getTicks = (min, max, maxTicks) => {
+      const range = max - min;
+      const roughStep = range / maxTicks;
+      const stepPower = Math.pow(10, Math.floor(Math.log10(roughStep)));
+      const normalizedStep = roughStep / stepPower;
+
+      //Clamp ticks to multiples of 1/2/5/10, whichever is closer
+      let multiplier = 1;
+      if (normalizedStep >= 1.5 && normalizedStep < 3) multiplier = 2;
+      else if (normalizedStep >= 3 && normalizedStep < 7) multiplier = 5;
+      else if (normalizedStep >= 7) multiplier = 10;
+
+      const step = stepPower * multiplier;
+      const startTick = Math.ceil(min / step) * step;
+      //No epsilon bugs since 1e-6 comes after division
+      const numTicks = Math.floor((max - startTick) / step + 1e-6) + 1;
+
+      const ticks = [];
+      for (let i = 0; i < numTicks; i++) {
+        ticks.push(startTick + (i * step));
       }
+      return ticks;
+    };
+    const xTicks = getTicks(domainMinX, domainMaxX, ticks);
+    const yTicks = getTicks(domainMinY, domainMaxY, ticks);
 
-      // Data point -> graph point functions, change these if we want to use a different scale (e.g logarithmic)
-      const scaleX = (val) => margin.left + ((val - domainMinX) / rangeX) * sizes.plotWidth;
-      const scaleY = (val) => margin.top + sizes.plotHeight - ((val - domainMinY) / rangeY) * sizes.plotHeight;
+    //format numbers properly
+    const formatAxisNumber = (num) => {
+      if (num === 0) return "0";
+      const absNum = Math.abs(num);
+      // switch to scientific notation if numbers are large/small
+      if (absNum >= 1e6 || absNum <= 1e-4) {
+        return num.toExponential(2); // e.g., 1.50e6
+      }
+      return new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 }).format(num);
+    };
 
-      //add tick lines
-      const getTicks = (min, max, maxTicks) => {
-          const range = max - min;
-          const roughStep = range / maxTicks;
-          const stepPower = Math.pow(10, Math.floor(Math.log10(roughStep)));
-          const normalizedStep = roughStep / stepPower;
-          
-          //Clamp ticks to multiples of 1/2/5/10, whichever is closer
-          let multiplier = 1;
-          if (normalizedStep >= 1.5 && normalizedStep < 3) multiplier = 2;
-          else if (normalizedStep >= 3 && normalizedStep < 7) multiplier = 5;
-          else if (normalizedStep >= 7) multiplier = 10;
-          
-          const step = stepPower * multiplier;
-          const startTick = Math.ceil(min / step) * step;
-          //No epsilon bugs since 1e-6 comes after division
-          const numTicks = Math.floor((max - startTick) / step + 1e-6) + 1; 
-
-          const ticks = [];
-          for (let i = 0; i < numTicks; i++) {
-              ticks.push(startTick + (i * step)); 
-          }
-          return ticks;
-      };
-      const xTicks = getTicks(domainMinX, domainMaxX, ticks);
-      const yTicks = getTicks(domainMinY, domainMaxY, ticks);
-
-      //format numbers properly
-      const formatAxisNumber = (num) => {
-          if (num === 0) return "0";
-          const absNum = Math.abs(num);
-          // switch to scientific notation if numbers are large/small
-          if (absNum >= 1e6 || absNum <= 1e-4) {
-              return num.toExponential(2); // e.g., 1.50e6
-          }
-          return new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 }).format(num);
-      };
-
-      // build svg, check style for possible customization, using class tags for simplicity
-      let svg = `<svg width="${x}" height="${y}" viewBox="0 0 ${x} ${y}" xmlns="http://www.w3.org/2000/svg">
+    // build svg, check style for possible customization, using class tags for simplicity
+    let svg = `<svg width="${x}" height="${y}" viewBox="0 0 ${x} ${y}" xmlns="http://www.w3.org/2000/svg">
           <style>
               .grid-line { stroke: #e0e0e0; stroke-width: ${sizes.gridStroke}; stroke-dasharray: ${sizes.gridDash}; }
               .axis-line { stroke: #333; stroke-width: ${sizes.axisStroke}; }
@@ -318,7 +318,8 @@ class PlotBaseElement extends HTMLElement {
               .axis-text { font-family: sans-serif; font-size: ${sizes.tickFont}px; fill: #555; text-anchor: middle; }
               .label-text { font-family: sans-serif; font-size: ${sizes.labelFont}px; font-weight: bold; fill: #333; text-anchor: middle; }
               .title-text { font-family: sans-serif; font-size: ${sizes.titleFont}px; font-weight: bold; fill: #111; text-anchor: middle; }
-              .point { fill: #3498db; stroke: #2980b9; stroke-width: ${Math.max(sizes.axisStroke / 2, 0.5)}; opacity: 0.8; }
+              .point { fill: var(--chart-color-theme, #3498db); stroke: var(--chart-color-theme, #3498db); stroke-width: ${Math.max(sizes.axisStroke / 2, 0.5)}; opacity: 0.8; }
+              .line-plot-point { fill: transparent; stroke: none; stroke-width: ${Math.max(sizes.axisStroke / 2, 0.5)}; opacity: 0.0; }
           </style>
           
           <defs>
@@ -329,50 +330,50 @@ class PlotBaseElement extends HTMLElement {
 
           <rect width="${x}" height="${y}" fill="#ffffff" />`;
 
-      //add tick numbers, grid lines
-      xTicks.forEach(tick => {
-          const px = scaleX(tick);
-          const textY = margin.top + sizes.plotHeight + (margin.bottom * 0.35);
-          svg += `
+    //add tick numbers, grid lines
+    xTicks.forEach(tick => {
+      const px = scaleX(tick);
+      const textY = margin.top + sizes.plotHeight + (margin.bottom * 0.35);
+      svg += `
               <line x1="${px}" y1="${margin.top}" x2="${px}" y2="${margin.top + sizes.plotHeight}" class="grid-line" />
               <text x="${px}" y="${textY}" class="axis-text">${formatAxisNumber(tick)}</text>
           `;
-      });
+    });
 
-      yTicks.forEach(tick => {
-          const py = scaleY(tick);
-          const textX = margin.left - (margin.left * 0.30);
-          const textY = py + (sizes.tickFont * 0.3);
-          svg += `
+    yTicks.forEach(tick => {
+      const py = scaleY(tick);
+      const textX = margin.left - (margin.left * 0.30);
+      const textY = py + (sizes.tickFont * 0.3);
+      svg += `
               <line x1="${margin.left}" y1="${py}" x2="${margin.left + sizes.plotWidth}" y2="${py}" class="grid-line" />
               <text x="${textX}" y="${textY}" class="axis-text" text-anchor="end">${formatAxisNumber(tick)}</text>
           `;
-      });
+    });
 
-      //axes, chart title, etc
+    //axes, chart title, etc
 
-      svg += `
+    svg += `
           <line x1="${margin.left}" y1="${margin.top + sizes.plotHeight}" x2="${margin.left + sizes.plotWidth}" y2="${margin.top + sizes.plotHeight}" class="axis-line" />
           <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${margin.top + sizes.plotHeight}" class="axis-line" />
       `;
 
-      const titleY = margin.top * 0.6;
-      const xLabelY = y - (margin.bottom * 0.15);
-      const yLabelX = margin.left * 0.25;
-      const yLabelY = margin.top + (sizes.plotHeight / 2);
+    const titleY = margin.top * 0.6;
+    const xLabelY = y - (margin.bottom * 0.15);
+    const yLabelX = margin.left * 0.25;
+    const yLabelY = margin.top + (sizes.plotHeight / 2);
 
-      svg += `
+    svg += `
           <text x="${x / 2}" y="${titleY}" class="title-text">${chartData.title}</text>
           <text x="${margin.left + (sizes.plotWidth / 2)}" y="${xLabelY}" class="label-text">${chartData['x-axis-label']}</text>
           <text x="${yLabelX}" y="${yLabelY}" class="label-text" transform="rotate(-90, ${yLabelX}, ${yLabelY})">${chartData['y-axis-label']}</text>
       `;
-      
-      // Let subclasses implement their own plot elements.
-      svg += this.applyPlotElements(chartData, sizes, margin, scaleX, scaleY);
 
-      return svg + `</svg>`;
+    // Let subclasses implement their own plot elements.
+    svg += this.applyPlotElements(chartData, sizes, margin, scaleX, scaleY);
+
+    return svg + `</svg>`;
   }
-  
+
   /**
    * Returns the attributes that are observed for changes.
    */
@@ -414,7 +415,7 @@ class PlotBaseElement extends HTMLElement {
    */
   renderGraph() {
     try {
-    this.shadowDOM.innerHTML = this.generateGraph({
+      this.shadowDOM.innerHTML = this.generateGraph({
         points: this._points,
         "x-axis-label": this._xAxisLabel,
         "y-axis-label": this._yAxisLabel,
@@ -431,38 +432,37 @@ class PlotBaseElement extends HTMLElement {
    * @returns {void}
    */
   setupHoverListeners() {
-    const circles = this.shadowDOM.querySelectorAll('circle');
+    const svgContainer = this.shadowRoot.querySelector('svg');
     const tooltip = document.getElementById("my-tooltip");
     const minDim = Math.min(this._width, this._height);
-    circles.forEach((circle) => {
-      circle.addEventListener('mouseenter', () => {
+    svgContainer.addEventListener('mouseover', (e) => {
+      if (e.target.tagName.toLowerCase() === 'circle') {
+        const circle = e.target;
         function follow() {
-        const rect = circle.getBoundingClientRect();
-        const xValue = circle.getAttribute('data-x');
-        const yValue = circle.getAttribute('data-y');
-        const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
-        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-        tooltip.setAttribute('x-coordinate', `${xValue}`);
-        tooltip.setAttribute('y-coordinate', `${yValue}`);
-        tooltip.setAttribute('x-position', `${rect.left + scrollX}`);
-        tooltip.setAttribute('y-position', `${rect.top + scrollY}`);
-        tooltip.setAttribute('visible', 'true');
-        tooltip.setAttribute('font-size', `${(minDim * 0.02).toFixed(1)}px`);
-        window.__followRaf = requestAnimationFrame(follow);
+          const rect = circle.getBoundingClientRect();
+          const xValue = circle.getAttribute('data-x');
+          const yValue = circle.getAttribute('data-y');
+          const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+          const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+          tooltip.setAttribute('x-coordinate', `${xValue}`);
+          tooltip.setAttribute('y-coordinate', `${yValue}`);
+          tooltip.setAttribute('x-position', `${rect.left + scrollX}`);
+          tooltip.setAttribute('y-position', `${rect.top + scrollY}`);
+          tooltip.setAttribute('visible', 'true');
+          tooltip.setAttribute('font-size', `${(minDim * 0.02).toFixed(1)}px`);
+          window.__followRaf = requestAnimationFrame(follow);
         }
         follow();
-      });
-    });
+      }
+    })
 
-    // When the mouse leaves the circle give a 500ms debounce then close the tooltip
-    circles.forEach((circle) => {
-      circle.addEventListener('mouseleave', () => {
-        clearTimeout(window.__tooltipTimeout);
+    svgContainer.addEventListener('mouseout', (e) => {
+      if (e.target.tagName.toLowerCase() === 'circle') {
         window.__tooltipTimeout = setTimeout(() => {
           cancelAnimationFrame(window.__followRaf);
           tooltip.setAttribute('visible', 'false');
-        }, 500);
-      });
+        }, 100);
+      }
     });
   }
 }
@@ -582,14 +582,14 @@ class ToolTipModal extends HTMLElement {
         <p class="tooltip-value">Y: <span id="tooltip-y" class="tooltip-value"></span></p>
       </div>
     `;
-    
+
     // Add event listeners for mouse enter and leave
     this.shadowDOM.querySelector('.tooltip').addEventListener('mouseenter', () => {
       clearTimeout(window.__tooltipTimeout);
     });
     this.shadowDOM.querySelector('.tooltip').addEventListener('mouseleave', () => {
-       this.setAttribute('visible', 'false');
-       cancelAnimationFrame(window.__followRaf);
+      this.setAttribute('visible', 'false');
+      cancelAnimationFrame(window.__followRaf);
     });
   }
 }

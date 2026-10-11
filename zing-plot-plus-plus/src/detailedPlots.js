@@ -26,7 +26,13 @@ class LinePlotElement extends PlotBaseElement {
         const [px, py] = p.coordinate;
         points += `${scaleX(px)},${scaleY(py)} `
       });
-      return `<g clip-path="url(#plot-clip)"> <polyline fill="none" stroke="blue" stroke-width="2" points="${points}"/> </g>`;
+      return `<g clip-path="url(#plot-clip)"> <polyline fill="none" stroke="var(--chart-color-theme, #3498db)" stroke-width="2" points="${points}"/>${
+        // Add transparent circles at each data point for interactivity
+        chartData.points.map(p => {
+          const [px, py] = p.coordinate;
+          return `<circle cx="${scaleX(px)}" cy="${scaleY(py)}" r="${sizes.pointRadius}" fill="transparent" stroke="none" data-x="${px}" data-y="${py}" class="line-plot-point" />`;
+        }).join('')
+      }</g>`;
     }
 }
 
