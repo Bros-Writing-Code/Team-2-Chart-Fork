@@ -447,7 +447,7 @@ class PlotBaseElement extends HTMLElement {
         tooltip.setAttribute('x-position', `${rect.left + scrollX}`);
         tooltip.setAttribute('y-position', `${rect.top + scrollY}`);
         tooltip.setAttribute('visible', 'true');
-        tooltip.setAttribute('font-size', `${minDim * 0.02}px`);
+        tooltip.setAttribute('font-size', `${minDim * 0.02  }px`);
         window.__followRaf = requestAnimationFrame(follow);
         }
         follow();
@@ -508,7 +508,7 @@ class ToolTipModal extends HTMLElement {
     let div;
     switch (name) {
       case 'font-size':
-        this.style.setProperty('--font-size', `${newValue}px`);
+        this.style.setProperty('--font-size', `${newValue}`);
         break;
       case 'font-family':
         this.style.setProperty('--font-family', `${newValue}`);
