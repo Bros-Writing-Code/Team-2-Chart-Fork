@@ -2,7 +2,7 @@ import scatter from "../src/scatter.js";
 
 /**
  * A custom element representing a plottable scatter plot.
- * @property {Array} points - The data points to plot.
+ * @property {Array<Point>} points - The data points to plot.
  * @property {string} title - The title of the chart.
  * @property {boolean} centerOrigin - Whether to center the origin of the chart.
  * @property {string} xAxisLabel - The label for the x-axis.
@@ -19,18 +19,6 @@ import scatter from "../src/scatter.js";
  */
 class ScatterPlot extends HTMLElement {
 
-  #_points = [];
-  #_title = "";
-  #_center_origin = false;
-  #_xAxisLabel = "";
-  #_yAxisLabel = "";
-  #_anchorX = 0;
-  #_anchorY = 0;
-  #_width = 0;
-  #_height = 0;
-  #_rangeX = 0;
-  #_rangeY = 0;
-  #_ticks = 0;
 
   /**
    * Called when the element is first created.
@@ -46,7 +34,7 @@ class ScatterPlot extends HTMLElement {
 
   /**
    * Sets the data points for the scatter plot.
-   * @param {Array} points - The data points to plot.
+   * @param {Array<Point>} points - The data points to plot.
    * @returns {void}
    */
   set Points(points) {
@@ -256,6 +244,7 @@ class ScatterPlot extends HTMLElement {
   setupHoverListeners() {
     const circles = this.shadowDOM.querySelectorAll('circle');
     const tooltip = document.getElementById("my-tooltip");
+    const minDim = Math.min(this._width, this._height);
     circles.forEach((circle) => {
       circle.addEventListener('mouseenter', () => {
         console.log('Mouse is over a point');
@@ -269,6 +258,7 @@ class ScatterPlot extends HTMLElement {
         tooltip.setAttribute('x-position', `${rect.left + scrollX}`);
         tooltip.setAttribute('y-position', `${rect.top + scrollY}`);
         tooltip.setAttribute('visible', 'true');
+        tooltip.setAttribute('font-size', `${minDim * 0.02}px`);
       });
     });
   }
@@ -289,7 +279,16 @@ class ToolTipModal extends HTMLElement {
    * The attributes that the custom element observes for changes.
    */
   static get observedAttributes() {
-    return ['x-coordinate', 'y-coordinate', 'x-position', 'y-position', 'visible'];
+    return ['x-coordinate', 'y-coordinate', 'x-position', 'y-position', 'font-size', 'font-family', 'visible'];
+  }
+
+  formatValue(value) {
+    // If the number is larger than 100,000 use scientific notation
+    const num = parseFloat(value);
+    if (num > 100000 || num < 0.001 && num !== 0) {
+      return num.toExponential(2);
+    }
+    return num.toFixed(2);
   }
 
   /**
@@ -305,11 +304,17 @@ class ToolTipModal extends HTMLElement {
     }
     let div;
     switch (name) {
+      case 'font-size':
+        this.style.setProperty('--font-size', `${newValue}px`);
+        break;
+      case 'font-family':
+        this.style.setProperty('--font-family', `${newValue}`);
+        break;
       case 'x-coordinate':
-        this.shadowDOM.querySelector('#tooltip-x').textContent = newValue;
+        this.shadowDOM.querySelector('#tooltip-x').textContent = this.formatValue(newValue);
         break;
       case 'y-coordinate':
-        this.shadowDOM.querySelector('#tooltip-y').textContent = newValue;
+        this.shadowDOM.querySelector('#tooltip-y').textContent = this.formatValue(newValue);
         break;
       case 'x-position':
         div = this.shadowDOM.querySelector('.tooltip');
@@ -334,13 +339,19 @@ class ToolTipModal extends HTMLElement {
   connectedCallback() {
     this.shadowDOM.innerHTML = `
       <style>
+
+        :host {
+          --font-size: 10px;
+          --font-family: sans-serif;
+        }
+
         .tooltip {
-          position: absolute;
+          position: relative;
           background-color: #fff;
           color: #000;
-          min-width: 100px;
+          width: max-content;
+          height: max-content;
           max-width: 200px;
-          min-height: 50px;
           max-height: 100px;
           text-align: center;
           padding: 5px;
@@ -359,11 +370,13 @@ class ToolTipModal extends HTMLElement {
 
         .tooltip-value {
           font-weight: bold;
+          font-size: var(--font-size);
+          font-family: var(--font-family);
         }
       </style>
       <div class="tooltip">
-        <p>X: <span id="tooltip-x" class="tooltip-value"></span></p>
-        <p>Y: <span id="tooltip-y" class="tooltip-value"></span></p>
+        <p class="tooltip-value">X: <span id="tooltip-x" class="tooltip-value"></span></p>
+        <p class="tooltip-value">Y: <span id="tooltip-y" class="tooltip-value"></span></p>
       </div>
     `;
     this.shadowDOM.querySelector('.tooltip').addEventListener('mouseleave', () => {
@@ -374,3 +387,5 @@ class ToolTipModal extends HTMLElement {
 
 customElements.define('scatter-plot', ScatterPlot);
 customElements.define('tool-tip-modal', ToolTipModal);
+
+export { ScatterPlot, ToolTipModal };
