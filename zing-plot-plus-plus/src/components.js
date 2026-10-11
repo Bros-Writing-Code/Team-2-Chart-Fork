@@ -262,10 +262,12 @@ class ScatterPlot extends HTMLElement {
         const rect = circle.getBoundingClientRect();
         const xValue = circle.getAttribute('data-x');
         const yValue = circle.getAttribute('data-y');
+        const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
         tooltip.setAttribute('x-coordinate', `${xValue}`);
         tooltip.setAttribute('y-coordinate', `${yValue}`);
-        tooltip.setAttribute('x-position', `${rect.left}`);
-        tooltip.setAttribute('y-position', `${rect.top}`);
+        tooltip.setAttribute('x-position', `${rect.left + scrollX}`);
+        tooltip.setAttribute('y-position', `${rect.top + scrollY}`);
         tooltip.setAttribute('visible', 'true');
       });
     });
@@ -347,6 +349,7 @@ class ToolTipModal extends HTMLElement {
           box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
           opacity: 0.0;
           transition: opacity 0.2s ease-in-out;
+          z-index: 1000;
         }
 
         .tooltip-active {
