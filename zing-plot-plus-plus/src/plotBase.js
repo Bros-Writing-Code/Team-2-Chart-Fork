@@ -454,6 +454,7 @@ class PlotBaseElement extends HTMLElement {
       });
     });
 
+    // When the mouse leaves the circle give a 500ms debounce then close the tooltip
     circles.forEach((circle) => {
       circle.addEventListener('mouseleave', () => {
         clearTimeout(window.__tooltipTimeout);
@@ -581,6 +582,8 @@ class ToolTipModal extends HTMLElement {
         <p class="tooltip-value">Y: <span id="tooltip-y" class="tooltip-value"></span></p>
       </div>
     `;
+    
+    // Add event listeners for mouse enter and leave
     this.shadowDOM.querySelector('.tooltip').addEventListener('mouseenter', () => {
       clearTimeout(window.__tooltipTimeout);
     });
