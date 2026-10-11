@@ -1,4 +1,15 @@
-import scatter from "../src/scatter.js";
+/**
+ * @typedef {object} Point
+ * @property {Array<number>} coordinate - Array containing the X and Y coordinates of the point
+ */
+
+/**
+ * @typedef {object} ChartData
+ * @property {string} title - The title of the chart
+ * @property {string} "x-axis-label" - The label for the X axis
+ * @property {string} "y-axis-label" - The label for the Y axis
+ * @property {Array<Point>} points - An array of points to display on the chart
+ */
 
 /**
  * A custom element representing a plottable scatter plot.
@@ -17,7 +28,7 @@ import scatter from "../src/scatter.js";
  * 
  * @extends HTMLElement
  */
-class ScatterPlot extends HTMLElement {
+class PlotBaseElement extends HTMLElement {
 
 
   /**
@@ -183,6 +194,184 @@ class ScatterPlot extends HTMLElement {
   disconnectedCallback() {
     // This method is called when the element is removed from the DOM
   }
+
+  /**
+   * Renders plot elements on top of the graph's base, overloaded by subclasses of PlotBaseElement
+   * TODO: better scale abstraction, consolidate construction parameters?
+   * @param {ChartData} chartData - data of the chart being constructed
+   * @param {object} sizes - Information about UI sizing specified during chart construction
+   * @param {object} margin - Additional sizing information
+   * @param {object} scaleX - Function for scaling chart data along the X dimension to UI size.
+   * @param {object} scaleY - Function for scaling chart data along the Y dimension to UI size.
+   * @returns {string} - An SVG component representing any plot elements to be layered on the base
+   */
+  applyPlotElements(chartData, sizes, margin, scaleX, scaleY) {
+    // Implementation in subclasses, see scatterPlot and linePlot.
+    // Would use abstract if this was Java, not sure if JS has an equivalent
+  }
+  
+  /**
+   * Generates a graph base and outputs it in an SVG HTML object.
+   * 
+   * @param {ChartData} chartData - JSON object following the chart format
+   * @param {number} x - Width of the component
+   * @param {number} y - Height of the component
+   * @param {boolean} center - If true, chart frame is fixed by a center point. If false, fixed by left-bottom corner.
+   * @param {number} centerX - Anchor coordinate X (e.g., what the value of the center/left of the X axis is).
+   * @param {number} centerY - Anchor coordinate Y (e.g., what the value of the center/bottom of the Y axis is).
+   * @param {number} rangeX - Range of displayed X values.
+   * @param {number} rangeY - Range of displayed Y values.
+   * @param {number} ticks - Number of displayed tick values per axis, result may have slightly less or more ticks due to rounding
+   * @returns {string} - An SVG string component containing the chart.
+   */
+
+  generateGraph(chartData, x, y, center, centerx, centery, rangeX, rangeY, ticks) {
+      const minDim = Math.min(x, y);
+
+      // TODO: Consolidate size parameters during generation? Update applyPlotElements if so.
+
+      const margin = { 
+          top: minDim * 0.08, 
+          right: minDim * 0.05, 
+          bottom: minDim * 0.12, 
+          left: minDim * 0.20
+      };
+
+      // sizes of various graph components as a % of SVG size, can change parameters
+      const sizes = {
+          // Actual plot dimensions
+          plotWidth: x - margin.left - margin.right,
+          plotHeight: y - margin.top - margin.bottom,
+          // Plot component dimensions
+          tickFont: minDim * 0.022,
+          labelFont: minDim * 0.03,
+          titleFont: minDim * 0.04,
+          pointRadius: Math.max(minDim * 0.008, 1.5),
+          axisStroke: Math.max(minDim * 0.003, 0.5),
+          gridStroke: Math.max(minDim * 0.0015, 0.25),
+          gridDash: Math.max(minDim * 0.008, 2)
+      };
+      
+      // calculate domain of graph
+      let domainMinX, domainMaxX, domainMinY, domainMaxY;
+      if (center === true) {
+          domainMinX = centerx - (rangeX / 2);
+          domainMaxX = centerx + (rangeX / 2);
+          domainMinY = centery - (rangeY / 2);
+          domainMaxY = centery + (rangeY / 2);
+      } else {
+          domainMinX = centerx;
+          domainMaxX = centerx + rangeX;
+          domainMinY = centery;
+          domainMaxY = centery + rangeY;
+      }
+
+      // Data point -> graph point functions, change these if we want to use a different scale (e.g logarithmic)
+      const scaleX = (val) => margin.left + ((val - domainMinX) / rangeX) * sizes.plotWidth;
+      const scaleY = (val) => margin.top + sizes.plotHeight - ((val - domainMinY) / rangeY) * sizes.plotHeight;
+
+      //add tick lines
+      const getTicks = (min, max, maxTicks) => {
+          const range = max - min;
+          const roughStep = range / maxTicks;
+          const stepPower = Math.pow(10, Math.floor(Math.log10(roughStep)));
+          const normalizedStep = roughStep / stepPower;
+          
+          //Clamp ticks to multiples of 1/2/5/10, whichever is closer
+          let multiplier = 1;
+          if (normalizedStep >= 1.5 && normalizedStep < 3) multiplier = 2;
+          else if (normalizedStep >= 3 && normalizedStep < 7) multiplier = 5;
+          else if (normalizedStep >= 7) multiplier = 10;
+          
+          const step = stepPower * multiplier;
+          const startTick = Math.ceil(min / step) * step;
+          //No epsilon bugs since 1e-6 comes after division
+          const numTicks = Math.floor((max - startTick) / step + 1e-6) + 1; 
+
+          const ticks = [];
+          for (let i = 0; i < numTicks; i++) {
+              ticks.push(startTick + (i * step)); 
+          }
+          return ticks;
+      };
+      const xTicks = getTicks(domainMinX, domainMaxX, ticks);
+      const yTicks = getTicks(domainMinY, domainMaxY, ticks);
+
+      //format numbers properly
+      const formatAxisNumber = (num) => {
+          if (num === 0) return "0";
+          const absNum = Math.abs(num);
+          // switch to scientific notation if numbers are large/small
+          if (absNum >= 1e6 || absNum <= 1e-4) {
+              return num.toExponential(2); // e.g., 1.50e6
+          }
+          return new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 }).format(num);
+      };
+
+      // build svg, check style for possible customization, using class tags for simplicity
+      let svg = `<svg width="${x}" height="${y}" viewBox="0 0 ${x} ${y}" xmlns="http://www.w3.org/2000/svg">
+          <style>
+              .grid-line { stroke: #e0e0e0; stroke-width: ${sizes.gridStroke}; stroke-dasharray: ${sizes.gridDash}; }
+              .axis-line { stroke: #333; stroke-width: ${sizes.axisStroke}; }
+              // TODO: Plotted line style
+              .plot-line { stroke: #111; stroke-width: ${sizes.axisStroke}; }
+              .axis-text { font-family: sans-serif; font-size: ${sizes.tickFont}px; fill: #555; text-anchor: middle; }
+              .label-text { font-family: sans-serif; font-size: ${sizes.labelFont}px; font-weight: bold; fill: #333; text-anchor: middle; }
+              .title-text { font-family: sans-serif; font-size: ${sizes.titleFont}px; font-weight: bold; fill: #111; text-anchor: middle; }
+              .point { fill: #3498db; stroke: #2980b9; stroke-width: ${Math.max(sizes.axisStroke / 2, 0.5)}; opacity: 0.8; }
+          </style>
+          
+          <defs>
+              <clipPath id="plot-clip">
+                  <rect x="${margin.left}" y="${margin.top}" width="${sizes.plotWidth}" height="${sizes.plotHeight}" />
+              </clipPath>
+          </defs>
+
+          <rect width="${x}" height="${y}" fill="#ffffff" />`;
+
+      //add tick numbers, grid lines
+      xTicks.forEach(tick => {
+          const px = scaleX(tick);
+          const textY = margin.top + sizes.plotHeight + (margin.bottom * 0.35);
+          svg += `
+              <line x1="${px}" y1="${margin.top}" x2="${px}" y2="${margin.top + sizes.plotHeight}" class="grid-line" />
+              <text x="${px}" y="${textY}" class="axis-text">${formatAxisNumber(tick)}</text>
+          `;
+      });
+
+      yTicks.forEach(tick => {
+          const py = scaleY(tick);
+          const textX = margin.left - (margin.left * 0.30);
+          const textY = py + (sizes.tickFont * 0.3);
+          svg += `
+              <line x1="${margin.left}" y1="${py}" x2="${margin.left + sizes.plotWidth}" y2="${py}" class="grid-line" />
+              <text x="${textX}" y="${textY}" class="axis-text" text-anchor="end">${formatAxisNumber(tick)}</text>
+          `;
+      });
+
+      //axes, chart title, etc
+
+      svg += `
+          <line x1="${margin.left}" y1="${margin.top + sizes.plotHeight}" x2="${margin.left + sizes.plotWidth}" y2="${margin.top + sizes.plotHeight}" class="axis-line" />
+          <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${margin.top + sizes.plotHeight}" class="axis-line" />
+      `;
+
+      const titleY = margin.top * 0.6;
+      const xLabelY = y - (margin.bottom * 0.15);
+      const yLabelX = margin.left * 0.25;
+      const yLabelY = margin.top + (sizes.plotHeight / 2);
+
+      svg += `
+          <text x="${x / 2}" y="${titleY}" class="title-text">${chartData.title}</text>
+          <text x="${margin.left + (sizes.plotWidth / 2)}" y="${xLabelY}" class="label-text">${chartData['x-axis-label']}</text>
+          <text x="${yLabelX}" y="${yLabelY}" class="label-text" transform="rotate(-90, ${yLabelX}, ${yLabelY})">${chartData['y-axis-label']}</text>
+      `;
+      
+      // Let subclasses implement their own plot elements.
+      svg += this.applyPlotElements(chartData, sizes, margin, scaleX, scaleY);
+
+      return svg + `</svg>`;
+  }
   
   /**
    * Returns the attributes that are observed for changes.
@@ -225,7 +414,7 @@ class ScatterPlot extends HTMLElement {
    */
   renderGraph() {
     try {
-    this.shadowDOM.innerHTML = scatter({
+    this.shadowDOM.innerHTML = this.generateGraph({
         points: this._points,
         "x-axis-label": this._xAxisLabel,
         "y-axis-label": this._yAxisLabel,
@@ -247,6 +436,7 @@ class ScatterPlot extends HTMLElement {
     const minDim = Math.min(this._width, this._height);
     circles.forEach((circle) => {
       circle.addEventListener('mouseenter', () => {
+        function follow() {
         const rect = circle.getBoundingClientRect();
         const xValue = circle.getAttribute('data-x');
         const yValue = circle.getAttribute('data-y');
@@ -258,6 +448,20 @@ class ScatterPlot extends HTMLElement {
         tooltip.setAttribute('y-position', `${rect.top + scrollY}`);
         tooltip.setAttribute('visible', 'true');
         tooltip.setAttribute('font-size', `${minDim * 0.02}px`);
+        window.__followRaf = requestAnimationFrame(follow);
+        }
+        follow();
+      });
+    });
+
+    // When the mouse leaves the circle give a 500ms debounce then close the tooltip
+    circles.forEach((circle) => {
+      circle.addEventListener('mouseleave', () => {
+        clearTimeout(window.__tooltipTimeout);
+        window.__tooltipTimeout = setTimeout(() => {
+          cancelAnimationFrame(window.__followRaf);
+          tooltip.setAttribute('visible', 'false');
+        }, 500);
       });
     });
   }
@@ -345,7 +549,7 @@ class ToolTipModal extends HTMLElement {
         }
 
         .tooltip {
-          position: relative;
+          position: absolute;
           background-color: #fff;
           color: #000;
           width: max-content;
@@ -378,13 +582,18 @@ class ToolTipModal extends HTMLElement {
         <p class="tooltip-value">Y: <span id="tooltip-y" class="tooltip-value"></span></p>
       </div>
     `;
+    
+    // Add event listeners for mouse enter and leave
+    this.shadowDOM.querySelector('.tooltip').addEventListener('mouseenter', () => {
+      clearTimeout(window.__tooltipTimeout);
+    });
     this.shadowDOM.querySelector('.tooltip').addEventListener('mouseleave', () => {
        this.setAttribute('visible', 'false');
+       cancelAnimationFrame(window.__followRaf);
     });
   }
 }
 
-customElements.define('scatter-plot', ScatterPlot);
 customElements.define('tool-tip-modal', ToolTipModal);
 
-export { ScatterPlot, ToolTipModal };
+export default PlotBaseElement;
