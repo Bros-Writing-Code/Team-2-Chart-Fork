@@ -5,11 +5,11 @@
 
 /* Define the global font, colors, and overall page scale here. */
 :root {
-  --purple: #6200ff;
+  --purple: #be4fd1;
 
   font-family: Arial, Helvetica, sans-serif;
-  color: #1304ba;
-  background: #d9c8ff;
+  color: #be4fd1;
+  background: #D0B7E5;
 }
 
 body {
@@ -18,14 +18,14 @@ body {
   background:
     radial-gradient(
       ellipse at 22% 5%,
-      #c6b1fa 0,
+      #D0B7E5 0,
       transparent 52%
     ),
     linear-gradient(
       115deg,
-      #d8c7ff,
-      #e0d3ff 65%,
-      #d6c4fa
+      #D0B7E5,
+      #D0B7E5 65%,
+      #D0B7E5
     );
 }
 
@@ -53,7 +53,7 @@ button {
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid #925aff;
+  outline: 3px solid #be4fd1;
   outline-offset: 3px;
 }
 
@@ -101,7 +101,7 @@ svg {
       #39246b
     );
   box-shadow:
-    0 4px 9px #5738a35c,
+    0 4px 9px #D0B7E5,
     inset 0 0 2px 2px #8d6ac7;
   position: relative;
   overflow: hidden;
@@ -128,7 +128,7 @@ svg {
 
 .hero p {
   font-size: 28px;
-  color: #bf9bee;
+  color: #D0B7E5;
   margin: 0;
   position: relative;
   letter-spacing: -0.6px;
@@ -146,25 +146,25 @@ svg {
 .brand-icon i {
   width: 19px;
   height: 44px;
-  background: linear-gradient(#dbaeff, #9950f6);
+  background: linear-gradient(#D0B7E5, #9950f6);
   border-radius: 7px;
   box-shadow: 0 2px 6px #492379;
 }
 
 .brand-icon i:nth-child(2) {
   height: 64px;
-  background: linear-gradient(#e3caff, #9859ff);
+  background: linear-gradient(#D0B7E5, #9859ff);
 }
 
 .brand-icon i:nth-child(3) {
   height: 80px;
-  background: linear-gradient(#d2f4ff, #6438f8);
+  background: linear-gradient(#d2f4ff, #8518ce);
 }
 
 /* Position the decorative circles inside the title banner. */
 .orb {
   position: absolute;
-  background: linear-gradient(140deg, #6252d7, #9a65e66e);
+  background: linear-gradient(140deg, #8518ce, #D0B7E5);
   border-radius: 50%;
 }
 
@@ -196,7 +196,7 @@ svg {
   height: 160px;
   right: -94px;
   bottom: -65px;
-  background: #a96bf880;
+  background: #D0B7E5;
 }
 
 .dots {
@@ -231,7 +231,7 @@ svg {
 /* Style the main chart-type selector and its active state. */
 .type-tabs {
   display: flex;
-  border: 4px solid #e7e1ff;
+  border: 4px solid #D0B7E5;
   border-radius: 17px;
   height: 79px;
   padding: 0;
@@ -254,11 +254,11 @@ svg {
 .type-tab.active,
 .generate,
 .save {
-  background: linear-gradient(115deg, #7450f3, #5d2def 63%, #4f27d3);
+  background: linear-gradient(115deg, #be4fd1, #be4fd1 63%, #be4fd1);
   color: white;
   box-shadow:
     inset 0 1px 2px #b699ff,
-    0 3px 7px #7b56d12b;
+    0 3px 7px #D0B7E5;
 }
 
 .type-tab svg {
@@ -271,7 +271,7 @@ svg {
   display: grid;
   grid-template-columns: 1.08fr 1fr;
   gap: 20px;
-  border: 1px solid #ded7ff;
+  border: 1px solid #D0B7E5;
   border-radius: 17px;
   padding: 19px 21px 8px;
   background: #f8f7ff66;
@@ -279,7 +279,7 @@ svg {
 
 .manual {
   padding-right: 19px;
-  border-right: 1px solid #d7caff;
+  border-right: 1px solid #D0B7E5;
   min-width: 0;
 }
 
@@ -296,7 +296,7 @@ svg {
 }
 
 .input-card h2 svg {
-  color: #5d05ef;
+  color: #8518ce;
   width: 36px;
   height: 42px;
   stroke-width: 4;
@@ -318,11 +318,11 @@ svg {
 .manual input,
 .manual textarea {
   width: 100%;
-  border: 2px solid #d8cfff;
+  border: 2px solid #D0B7E5;
   border-radius: 9px;
   background: #ffffffc9;
   padding: 6px 14px;
-  color: #2107ed;
+  color: #8518ce;
   font-size: 20px;
   line-height: 25px;
   display: block;
@@ -346,7 +346,7 @@ svg {
 .help {
   font-size: 16px;
   line-height: 20px;
-  color: #825cff;
+  color: #8518ce;
   margin: 5px 0 0;
 }
 
@@ -367,13 +367,13 @@ svg {
 .upload-description {
   font-size: 20px;
   line-height: 25px;
-  color: #8157ff;
+  color: #8518ce;
   margin: 14px 0 26px;
   letter-spacing: -0.4px;
 }
 
 .drop-zone {
-  border: 2px dashed #c5b0ff;
+  border: 2px dashed #D0B7E5;
   border-radius: 14px;
   height: 405px;
   text-align: center;
@@ -387,14 +387,14 @@ svg {
 
 /* Highlight the upload area when a file is dragged over it. */
 .drop-zone.dragging {
-  background: #e6d8ff;
-  border-color: #6300ff;
+  background: #D0B7E5;
+  border-color: #8518ce;
 }
 
 .cloud {
   width: 95px;
   height: 95px;
-  stroke: #6200ff;
+  stroke: #be4fd1;
   stroke-width: 7;
   margin-bottom: 12px;
 }
@@ -420,11 +420,11 @@ svg {
   height: 60px;
   border-radius: 12px;
   margin-top: 29px;
-  background: linear-gradient(100deg, #e0d5ff, #d9cefb);
-  border: 1px solid #d6c5ff;
+  background: linear-gradient(100deg, #D0B7E5, #D0B7E5);
+  border: 1px solid #D0B7E5;
   font-size: 23px;
   font-weight: 700;
-  color: #2108ee;
+  color: #8518ce;
 }
 
 .choose svg {
@@ -434,7 +434,7 @@ svg {
 
 .drop-zone small {
   font-size: 18px;
-  color: #7751ff;
+  color: #8518ce;
   margin-top: 24px;
   max-width: 100%;
   overflow-wrap: anywhere;
@@ -452,7 +452,7 @@ svg {
   font-size: 30px;
   font-weight: 700;
   margin-top: 9px;
-  border: 3px solid #eee8ff;
+  border: 3px solid #D0B7E5;
 }
 
 .generate svg {
@@ -494,7 +494,7 @@ svg {
   padding: 9px 10px;
   border-radius: 9px;
   white-space: nowrap;
-  background: #ede7ff;
+  background: #D0B7E5;
 }
 
 .preview-actions button svg {
@@ -504,11 +504,11 @@ svg {
 }
 
 .preview-actions .selected {
-  background: #e9e0ff;
+  background: #D0B7E5;
 }
 
 .preview-actions .save {
-  background: linear-gradient(120deg, #7850f4, #5426d8);
+  background: linear-gradient(120deg, #be4fd1, #be4fd1 63%, #be4fd1);
   color: white;
   padding: 9px 13px;
   margin-left: 1px;
@@ -516,7 +516,7 @@ svg {
 
 /* Preserve the chart's proportions and override the default icon styles. */
 .chart-container {
-  border: 1px solid #e2dcff;
+  border: 1px solid #D0B7E5;
   border-radius: 14px;
   background: #ffffffd9;
   overflow: hidden;
@@ -537,7 +537,7 @@ svg {
 #message {
   margin: 8px 3px;
   font-size: 16px;
-  color: #5b2fb5;
+  color: #8518ce;
 }
 
 #message.error {
