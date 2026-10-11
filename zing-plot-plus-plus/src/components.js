@@ -247,7 +247,6 @@ class ScatterPlot extends HTMLElement {
     const minDim = Math.min(this._width, this._height);
     circles.forEach((circle) => {
       circle.addEventListener('mouseenter', () => {
-        console.log('Mouse is over a point');
         const rect = circle.getBoundingClientRect();
         const xValue = circle.getAttribute('data-x');
         const yValue = circle.getAttribute('data-y');

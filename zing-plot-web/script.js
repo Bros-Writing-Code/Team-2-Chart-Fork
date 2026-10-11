@@ -436,10 +436,10 @@ function bindEvents() {
   }
 }
 
-let windowResizeTimer;
+let windowResizeTimeout;
 window.addEventListener("resize", () => {
-  clearTimeout(windowResizeTimer);
-  windowResizeTimer = setTimeout(() => {
+  clearTimeout(windowResizeTimeout);
+  windowResizeTimeout = setTimeout(() => {
     if (window.innerWidth !== prevWidth || window.innerHeight !== prevHeight) {
       prevWidth = window.innerWidth;
       prevHeight = window.innerHeight;
