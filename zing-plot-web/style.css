@@ -1,0 +1,889 @@
+/* Apply consistent sizing to every element. */
+* {
+  box-sizing: border-box;
+}
+
+/* Define the global font, colors, and overall page scale here. */
+:root {
+  --purple: #be4fd1;
+
+  font-family: Arial, Helvetica, sans-serif;
+  color: #be4fd1;
+  background: #D0B7E5;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      ellipse at 22% 5%,
+      #D0B7E5 0,
+      transparent 52%
+    ),
+    linear-gradient(
+      115deg,
+      #D0B7E5,
+      #D0B7E5 65%,
+      #D0B7E5
+    );
+}
+
+/* Hide the shared SVG definitions while keeping their icons available. */
+.symbols {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  color: inherit;
+}
+
+/* Show a visible focus indicator for keyboard navigation. */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #be4fd1;
+  outline-offset: 3px;
+}
+
+button:hover {
+  filter: brightness(1.06);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+/* Set the default appearance of interface icons. */
+svg {
+  width: 42px;
+  height: 42px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* Center and visually scale the page without changing its layout space. */
+.app {
+  padding: 25px 29px 23px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* Style the title banner and its background. */
+.hero {
+  height: 196px;
+  border-radius: 19px;
+  background:
+    radial-gradient(
+      ellipse at 12% 0,
+      #343f92,
+      transparent 65%
+    ),
+    linear-gradient(
+      110deg,
+      #303276,
+      #302254 65%,
+      #39246b
+    );
+  box-shadow:
+    0 4px 9px #D0B7E5,
+    inset 0 0 2px 2px #8d6ac7;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero h1 {
+  font-size: 80px;
+  font-weight: 800;
+  letter-spacing: -2px;
+  line-height: 1.08;
+  color: #faf7ff;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  margin: 0 0 17px;
+  text-shadow: 0 3px 2px #20154c55;
+  white-space: nowrap;
+}
+
+.hero p {
+  font-size: 28px;
+  color: #D0B7E5;
+  margin: 0;
+  position: relative;
+  letter-spacing: -0.6px;
+  white-space: nowrap;
+}
+
+/* Build the three-bar logo using the header's decorative elements. */
+.brand-icon {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 80px;
+}
+
+.brand-icon i {
+  width: 19px;
+  height: 44px;
+  background: linear-gradient(#D0B7E5, #9950f6);
+  border-radius: 7px;
+  box-shadow: 0 2px 6px #492379;
+}
+
+.brand-icon i:nth-child(2) {
+  height: 64px;
+  background: linear-gradient(#D0B7E5, #9859ff);
+}
+
+.brand-icon i:nth-child(3) {
+  height: 80px;
+  background: linear-gradient(#d2f4ff, #8518ce);
+}
+
+/* Position the decorative circles inside the title banner. */
+.orb {
+  position: absolute;
+  background: linear-gradient(140deg, #8518ce, #D0B7E5);
+  border-radius: 50%;
+}
+
+.one {
+  width: 300px;
+  height: 300px;
+  left: -116px;
+  top: -202px;
+}
+
+.two {
+  width: 188px;
+  height: 188px;
+  left: -124px;
+  top: 39px;
+  background: #aa84f58c;
+}
+
+.three {
+  width: 330px;
+  height: 330px;
+  right: -159px;
+  top: -194px;
+  background: #6538bdb0;
+}
+
+.four {
+  width: 160px;
+  height: 160px;
+  right: -94px;
+  bottom: -65px;
+  background: #D0B7E5;
+}
+
+.dots {
+  position: absolute;
+  right: 25px;
+  top: 35px;
+  font-size: 27px;
+  letter-spacing: 14px;
+  line-height: 25px;
+  color: #9b65e5;
+}
+
+/* Place the settings panel and chart preview side by side on desktop. */
+.workspace {
+  display: grid;
+  grid-template-columns: 1.065fr 1fr;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.panel {
+  background: linear-gradient(130deg, #fcfcffef, #f7f6ffef);
+  border-radius: 20px;
+  padding: 16px;
+  min-width: 0;
+}
+
+.editor {
+  padding: 16px 20px 18px;
+}
+
+/* Style the main chart-type selector and its active state. */
+.type-tabs {
+  display: flex;
+  border: 4px solid #D0B7E5;
+  border-radius: 17px;
+  height: 79px;
+  padding: 0;
+  margin-bottom: 16px;
+}
+
+.type-tab {
+  width: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 25px;
+  background: transparent;
+  font-size: 28px;
+  font-weight: 700;
+  border-radius: 14px;
+  white-space: nowrap;
+}
+
+.type-tab.active,
+.generate,
+.save {
+  background: linear-gradient(115deg, #be4fd1, #be4fd1 63%, #be4fd1);
+  color: white;
+  box-shadow:
+    inset 0 1px 2px #b699ff,
+    0 3px 7px #D0B7E5;
+}
+
+.type-tab svg {
+  width: 48px;
+  height: 48px;
+}
+
+/* Divide the input card into manual entry and file upload columns. */
+.input-card {
+  display: grid;
+  grid-template-columns: 1.08fr 1fr;
+  gap: 20px;
+  border: 1px solid #D0B7E5;
+  border-radius: 17px;
+  padding: 19px 21px 8px;
+  background: #f8f7ff66;
+}
+
+.manual {
+  padding-right: 19px;
+  border-right: 1px solid #D0B7E5;
+  min-width: 0;
+}
+
+.input-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -1px;
+  white-space: nowrap;
+  margin: 0 0 16px;
+  height: 43px;
+}
+
+.input-card h2 svg {
+  color: #8518ce;
+  width: 36px;
+  height: 42px;
+  stroke-width: 4;
+}
+
+/* Control the appearance and spacing of manual data fields. */
+.manual label {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin: 17px 0 8px;
+}
+
+.manual label:first-of-type {
+  margin-top: 9px;
+}
+
+.manual input,
+.manual textarea {
+  width: 100%;
+  border: 2px solid #D0B7E5;
+  border-radius: 9px;
+  background: #ffffffc9;
+  padding: 6px 14px;
+  color: #8518ce;
+  font-size: 20px;
+  line-height: 25px;
+  display: block;
+  min-width: 0;
+}
+
+.manual input {
+  height: 41px;
+}
+
+.manual textarea {
+  height: 72px;
+  resize: vertical;
+}
+
+.manual #y-values {
+  height: 41px;
+  min-height: 41px;
+}
+
+.help {
+  font-size: 16px;
+  line-height: 20px;
+  color: #8518ce;
+  margin: 5px 0 0;
+}
+
+.help + label {
+  margin-top: 12px;
+}
+
+/* Style the shared JSON and CSV upload area. */
+.upload {
+  min-width: 0;
+}
+
+.upload h2 {
+  gap: 15px;
+  font-size: 24px;
+}
+
+.upload-description {
+  font-size: 20px;
+  line-height: 25px;
+  color: #8518ce;
+  margin: 14px 0 26px;
+  letter-spacing: -0.4px;
+}
+
+.drop-zone {
+  border: 2px dashed #D0B7E5;
+  border-radius: 14px;
+  height: 405px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 65px 9px 20px;
+  background: #fbfaff60;
+  cursor: pointer;
+}
+
+/* Highlight the upload area when a file is dragged over it. */
+.drop-zone.dragging {
+  background: #D0B7E5;
+  border-color: #8518ce;
+}
+
+.cloud {
+  width: 95px;
+  height: 95px;
+  stroke: #be4fd1;
+  stroke-width: 7;
+  margin-bottom: 12px;
+}
+
+.drop-zone strong {
+  font-size: 20px;
+  letter-spacing: -0.7px;
+  white-space: nowrap;
+}
+
+.drop-zone > span {
+  font-size: 20px;
+  color: #7954ff;
+  margin-top: 7px;
+}
+
+.choose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 94%;
+  height: 60px;
+  border-radius: 12px;
+  margin-top: 29px;
+  background: linear-gradient(100deg, #D0B7E5, #D0B7E5);
+  border: 1px solid #D0B7E5;
+  font-size: 23px;
+  font-weight: 700;
+  color: #8518ce;
+}
+
+.choose svg {
+  width: 30px;
+  height: 30px;
+}
+
+.drop-zone small {
+  font-size: 18px;
+  color: #8518ce;
+  margin-top: 24px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* Style the primary action that applies manual input to the chart. */
+.generate {
+  width: 100%;
+  height: 70px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 26px;
+  border-radius: 16px;
+  font-size: 30px;
+  font-weight: 700;
+  margin-top: 9px;
+  border: 3px solid #D0B7E5;
+}
+
+.generate svg {
+  width: 48px;
+  height: 48px;
+}
+
+/* Arrange the preview title, chart toggles, and Save button. */
+.preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 63px;
+  margin: 1px 0 18px;
+  gap: 12px;
+}
+
+.preview-toolbar h2 {
+  font-size: 35px;
+  letter-spacing: -1.4px;
+  white-space: nowrap;
+  margin: 0 0 0 6px;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 4px;
+  align-self: stretch;
+  min-width: 0;
+}
+
+.preview-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 18px;
+  letter-spacing: -0.6px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  white-space: nowrap;
+  background: #D0B7E5;
+}
+
+.preview-actions button svg {
+  width: 29px;
+  height: 29px;
+  stroke-width: 3;
+}
+
+.preview-actions .selected {
+  background: #D0B7E5;
+}
+
+.preview-actions .save {
+  background: linear-gradient(120deg, #be4fd1, #be4fd1 63%, #be4fd1);
+  color: white;
+  padding: 9px 13px;
+  margin-left: 1px;
+}
+
+/* Preserve the chart's proportions and override the default icon styles. */
+.chart-container {
+  border: 1px solid #D0B7E5;
+  border-radius: 14px;
+  background: #ffffffd9;
+  overflow: hidden;
+  aspect-ratio: 634 / 710;
+  min-height: 0;
+}
+
+.chart-container > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  stroke: none;
+  stroke-width: 0;
+  fill: none;
+}
+
+/* Display status messages and highlight validation errors. */
+#message {
+  margin: 8px 3px;
+  font-size: 16px;
+  color: #8518ce;
+}
+
+#message.error {
+  color: #b41c5a;
+}
+
+/* Reduce component sizes proportionally on compact desktop screens. */
+@media (min-width: 1000px) and (max-width: 1400px) {
+  .app {
+    padding: 1.7265vw 2.003vw 1.588vw;
+  }
+
+  .hero {
+    height: 13.536vw;
+  }
+
+  .hero h1 {
+    font-size: 5.525vw;
+    gap: 1.726vw;
+    margin-bottom: 1.174vw;
+  }
+
+  .hero p {
+    font-size: 1.934vw;
+  }
+
+  .brand-icon {
+    transform: scale(0.9);
+  }
+
+  .workspace {
+    margin-top: 1.243vw;
+    gap: 0.967vw;
+  }
+
+  .panel {
+    padding: 1.105vw;
+  }
+
+  .editor {
+    padding: 1.105vw 1.381vw 1.243vw;
+  }
+
+  .type-tabs {
+    height: 5.456vw;
+    margin-bottom: 1.105vw;
+  }
+
+  .type-tab {
+    font-size: 1.934vw;
+    gap: 1.726vw;
+  }
+
+  .type-tab svg {
+    width: 3.315vw;
+    height: 3.315vw;
+  }
+
+  .input-card {
+    padding: 1.312vw 1.45vw 0.552vw;
+    gap: 1.381vw;
+  }
+
+  .manual {
+    padding-right: 1.312vw;
+  }
+
+  .input-card h2,
+  .upload h2 {
+    font-size: 1.657vw;
+    gap: 1.036vw;
+    height: 2.969vw;
+    margin-bottom: 1.105vw;
+  }
+
+  .input-card h2 svg {
+    width: 2.486vw;
+    height: 2.9vw;
+  }
+
+  .manual label {
+    font-size: 1.381vw;
+    margin: 1.174vw 0 0.552vw;
+  }
+
+  .manual label:first-of-type {
+    margin-top: 0.621vw;
+  }
+
+  .manual input,
+  .manual textarea {
+    font-size: 1.381vw;
+    line-height: 1.726vw;
+    padding: 0.414vw 0.967vw;
+  }
+
+  .manual input,
+  .manual #y-values {
+    height: 2.831vw;
+    min-height: 2.831vw;
+  }
+
+  .manual textarea {
+    height: 4.972vw;
+  }
+
+  .help {
+    font-size: 1.105vw;
+    line-height: 1.381vw;
+    margin-top: 0.345vw;
+  }
+
+  .help + label {
+    margin-top: 0.828vw;
+  }
+
+  .upload-description {
+    font-size: 1.381vw;
+    line-height: 1.726vw;
+    margin: 0.967vw 0 1.795vw;
+  }
+
+  .drop-zone {
+    height: 27.969vw;
+    padding: 4.489vw 0.621vw 1.381vw;
+  }
+
+  .cloud {
+    width: 6.56vw;
+    height: 6.56vw;
+    margin-bottom: 0.828vw;
+  }
+
+  .drop-zone strong,
+  .drop-zone > span {
+    font-size: 1.381vw;
+  }
+
+  .choose {
+    height: 4.143vw;
+    font-size: 1.588vw;
+    margin-top: 2.003vw;
+  }
+
+  .drop-zone small {
+    font-size: 1.243vw;
+    margin-top: 1.657vw;
+  }
+
+  .generate {
+    height: 4.834vw;
+    font-size: 2.071vw;
+    margin-top: 0.621vw;
+  }
+
+  .generate svg {
+    width: 3.315vw;
+    height: 3.315vw;
+  }
+
+  .preview-toolbar {
+    height: 4.35vw;
+    margin-bottom: 1.243vw;
+    gap: 0.828vw;
+  }
+
+  .preview-toolbar h2 {
+    font-size: 2.417vw;
+    letter-spacing: -1px;
+  }
+
+  .preview-actions button {
+    font-size: 1.243vw;
+    padding: 0.621vw 0.69vw;
+    gap: 0.414vw;
+  }
+
+  .preview-actions button svg {
+    width: 2.003vw;
+    height: 2.003vw;
+  }
+
+  .preview-actions .save {
+    padding: 0.621vw 0.897vw;
+  }
+}
+
+/* Stack the main panels vertically on tablet screens. */
+@media (max-width: 999px) {
+  .app {
+    padding: 20px;
+  }
+
+  .hero {
+    height: auto;
+    padding: 30px 20px;
+  }
+
+  .hero h1 {
+    font-size: clamp(28px, 5.4vw, 60px);
+    white-space: normal;
+    gap: 15px;
+    letter-spacing: -1px;
+  }
+
+  .brand-icon {
+    transform: scale(0.65);
+    width: 64px;
+    margin-left: -10px;
+  }
+
+  .hero p {
+    white-space: normal;
+    font-size: 18px;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-toolbar h2 {
+    font-size: 28px;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+
+  .chart-container {
+    max-height: 720px;
+  }
+
+  .input-card h2 {
+    font-size: 22px;
+  }
+
+  .type-tab {
+    font-size: 24px;
+  }
+}
+
+/* Stack input sections and wrap preview controls on mobile screens. */
+@media (max-width: 600px) {
+  .app {
+    padding: 12px;
+  }
+
+  .hero {
+    padding: 20px 12px;
+  }
+
+  .hero h1 {
+    font-size: 29px;
+    gap: 3px;
+    margin-bottom: 10px;
+  }
+
+  .brand-icon {
+    transform: scale(0.46);
+    width: 49px;
+    height: 64px;
+  }
+
+  .hero p {
+    font-size: 15px;
+  }
+
+  .input-card {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .manual {
+    border: 0;
+    padding: 0;
+  }
+
+  .upload {
+    border-top: 1px solid #d7caff;
+    padding-top: 18px;
+  }
+
+  .upload-description br {
+    display: none;
+  }
+
+  .drop-zone {
+    height: 280px;
+    padding-top: 24px;
+  }
+
+  .cloud {
+    width: 72px;
+    height: 72px;
+  }
+
+  .choose {
+    margin-top: 17px;
+    height: 48px;
+  }
+
+  .drop-zone small {
+    margin-top: 15px;
+  }
+
+  .type-tab {
+    font-size: 19px;
+    gap: 12px;
+  }
+
+  .type-tab svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .preview-toolbar {
+    height: auto;
+    flex-wrap: wrap;
+  }
+
+  .preview-toolbar h2 {
+    font-size: 28px;
+    margin: 0;
+  }
+
+  .preview-actions {
+    width: 100%;
+    height: 50px;
+  }
+
+  .preview-actions button {
+    flex: 1;
+    font-size: 16px;
+  }
+
+  .generate {
+    font-size: 25px;
+  }
+
+  .chart-container {
+    aspect-ratio: 634 / 710;
+  }
+
+  .input-card h2 {
+    font-size: 24px;
+  }
+}
