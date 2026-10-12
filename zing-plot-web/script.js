@@ -76,11 +76,16 @@ function validate(data) {
     }
     return number;
   };
-  return {
-    ...data,
-    x: data.x.map(toNumber),
-    y: data.y.map(toNumber),
-  };
+  const x = data.x.map(toNumber);
+  const y = data.y.map(toNumber);
+  // Negative values are out of scope: the axes always start at 0, so they would
+  // be drawn off-chart. Tell the user instead of showing a blank chart.
+  if (x.some((n) => n < 0) || y.some((n) => n < 0)) {
+    throw new Error(
+      "Negative values are not supported. Please use X and Y values of 0 or greater."
+    );
+  }
+  return { ...data, x, y };
 }
 
 // Display success messages or validation errors below the input card.

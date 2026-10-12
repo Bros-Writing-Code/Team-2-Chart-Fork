@@ -1,0 +1,25 @@
+name: "Tests"
+
+# Runs on every push and pull request so problems show up before they reach main.
+# No npm install needed: both suites use Node's built-in test runner (node:test).
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Library tests (zing-plot-plus-plus)
+        run: npm test
+        working-directory: ./zing-plot-plus-plus
+      - name: Website + QA fixture tests (zing-plot-web)
+        run: node --test --test-reporter=spec
+        working-directory: ./zing-plot-web

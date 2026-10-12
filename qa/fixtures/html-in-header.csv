@@ -1,0 +1,3 @@
+"<img src=x onerror=alert(document.domain)>",y
+1,2
+2,4
