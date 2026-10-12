@@ -5,9 +5,6 @@ on:
     branches:
       - main
 
-permissions:
-  actions: write
-
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -23,26 +20,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Get the current package version
-        run: echo "CURRENT_VERSION=$(node -p "require('./zing-plot-plus-plus/package.json').version")" >> $GITHUB_ENV
-      - name: Compare versions
-        env:
-          GH_TOKEN: ${{ secrets.GH_ACTION_REPO_ACCESS_TOKEN }}
-          OPTIONAL_LAST_VERSION: ${{ vars.LAST_VERSION }}
-        run: |
-          LAST_VERSION="${OPTIONAL_LAST_VERSION:-none}"
-          echo "Current Version: $CURRENT_VERSION"
-          echo "Last Version saved: $LAST_VERSION"
-          if [ "$CURRENT_VERSION" != "$LAST_VERSION" ]; then
-            echo "Versions are different. Proceeding with publish."
-          else
-            echo "Versions are the same. Skipping publish."
-            exit 1
-          fi
-      - name: Set publish version in variables
-        env:
-          GH_TOKEN: ${{ secrets.GH_ACTION_REPO_ACCESS_TOKEN }}
-        run: gh variable set LAST_VERSION -b "$CURRENT_VERSION"
       - name: Update npm
         run: npm install -g npm@latest
       - name: Install dependencies
@@ -50,7 +27,12 @@ jobs:
         working-directory: ./zing-plot-plus-plus
       - name: Test
         run: npm test
-        working-directory: ./zing-plot-plus-plus
       - name: Publish
-        run: npm publish
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ -n "$(npm view "zing-plot-plus-plus@$VERSION" version 2>/dev/null)" ]; then
+            echo "Version $VERSION is already on npm. Skipping publish."
+          else
+            npm publish
+          fi
         working-directory: ./zing-plot-plus-plus

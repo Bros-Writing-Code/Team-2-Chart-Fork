@@ -396,15 +396,15 @@ class PlotBaseElement extends HTMLElement {
     switch (name) {
       case 'title':
         this._title = newValue;
-        this.shadowDOM.querySelector('title-text').textContent = newValue;
+        this.shadowDOM.querySelector('.title-text').textContent = newValue;
         break;
       case 'x-axis-label':
         this._xAxisLabel = newValue;
-        this.shadowDOM.querySelector('x-axis-label-text').textContent = newValue;
+        this.shadowDOM.querySelectorAll('.label-text')[0].textContent = newValue;
         break;
       case 'y-axis-label':
         this._yAxisLabel = newValue;
-        this.shadowDOM.querySelector('y-axis-label-text').textContent = newValue;
+        this.shadowDOM.querySelectorAll('.label-text')[1].textContent = newValue;
         break;
     }
   }
