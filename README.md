@@ -249,7 +249,7 @@ Zing-Plot-Web allows you to:
 
 ### 🔍 Trying it out
 
-<img src="https://cse-210-t2-shared-storage.s3.us-west-2.amazonaws.com/demo.gif" width="600" alt="Demo">
+https://github.com/user-attachments/assets/5a97b4ef-b651-4397-884b-ecc7235a8c7c
 
 To try out Zing-Plot-Web:
 
