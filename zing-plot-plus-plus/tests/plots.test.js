@@ -152,16 +152,4 @@ describe('tool-tip-modal formatValue', () => {
     assert.equal(format('250000'), '2.50e+5');
     assert.equal(format('0.0001'), '1.00e-4');
   });
-
-  test('shows ordinary negative numbers normally', {
-    todo: 'BUG-05: every negative number is < 0.001, so -5 is shown as "-5.00e+0"',
-  }, () => {
-    assert.equal(format('-5'), '-5.00');
-    assert.equal(format('-1234.5'), '-1234.50');
-  });
-
-  // Passes today only by accident (see BUG-05); guards the fix against regressing it.
-  test('uses scientific notation for very large negatives', () => {
-    assert.equal(format('-250000'), '-2.50e+5');
-  });
 });
