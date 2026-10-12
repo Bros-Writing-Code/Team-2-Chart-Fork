@@ -125,9 +125,13 @@ describe('chart base (axes, labels, ticks)', () => {
   test('escapes markup in the title and labels', {
     todo: 'BUG-02: title/labels are inserted into innerHTML unescaped (broken SVG, and script injection from an uploaded file)',
   }, () => {
-    // Compare only the label text, so a failure prints a short diff instead of the whole SVG.
-    const svg = render('scatter-plot', chart([], { title: '<img src=x onerror=alert(1)>', 'x-axis-label': 'a < b & c' }));
-    assert.deepEqual(labelTexts(svg).slice(0, 2), ['&lt;img src=x onerror=alert(1)&gt;', 'a &lt; b &amp; c']);
+    // Any valid escaping passes: no raw "<" reaches the markup, and the text decodes back unchanged.
+    const input = ['<img src=x onerror=alert(1)>', 'a < b & c'];
+    const svg = render('scatter-plot', chart([], { title: input[0], 'x-axis-label': input[1] }));
+    const shown = labelTexts(svg).slice(0, 2);
+    assert.deepEqual(shown.map((t) => t.includes('<')), [false, false], `raw markup in: ${shown.join(' | ')}`);
+    const decode = (t) => t.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&amp;/g, '&');
+    assert.deepEqual(shown.map(decode), input);
   });
 
   test('omitted labels render as empty, not the text "undefined"', {
