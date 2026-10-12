@@ -37,6 +37,11 @@ function circles(svg, cls) {
   return [...svg.matchAll(re)].map(([, cx, cy, x, y]) => ({ cx: +cx, cy: +cy, x: +x, y: +y }));
 }
 
+/** Raw markup inside the title, x-label and y-label <text> elements, in that order. */
+function labelTexts(svg) {
+  return [...svg.matchAll(/class="(?:title|label)-text"[^>]*>([\s\S]*?)<\/text>/g)].map((m) => m[1]);
+}
+
 /** Extracts [x, y] pixel pairs from the line chart's polyline. */
 function polyline(svg) {
   const m = svg.match(/<polyline[^>]*points="([^"]*)"/);
@@ -120,23 +125,22 @@ describe('chart base (axes, labels, ticks)', () => {
   test('escapes markup in the title and labels', {
     todo: 'BUG-02: title/labels are inserted into innerHTML unescaped (broken SVG, and script injection from an uploaded file)',
   }, () => {
+    // Compare only the label text, so a failure prints a short diff instead of the whole SVG.
     const svg = render('scatter-plot', chart([], { title: '<img src=x onerror=alert(1)>', 'x-axis-label': 'a < b & c' }));
-    assert.doesNotMatch(svg, /<img/);
-    assert.match(svg, /&lt;img/);
-    assert.match(svg, /a &lt; b &amp; c/);
+    assert.deepEqual(labelTexts(svg).slice(0, 2), ['&lt;img src=x onerror=alert(1)&gt;', 'a &lt; b &amp; c']);
   });
 
   test('omitted labels render as empty, not the text "undefined"', {
     todo: 'BUG-03: a missing title or axis label is printed as "undefined"',
   }, () => {
-    assert.doesNotMatch(render('scatter-plot', { points: [] }), /undefined/);
+    assert.deepEqual(labelTexts(render('scatter-plot', { points: [] })), ['', '', '']);
   });
 
   test('a zero-width range (e.g. a single point at x=0) produces no NaN coordinates', {
     todo: 'BUG-04: rangeX/rangeY of 0 divides by zero; the site passes 0 for a single point at the origin',
   }, () => {
-    const svg = render('scatter-plot', chart(pts([0, 0])), { rangeX: 0, rangeY: 0 });
-    assert.doesNotMatch(svg, /NaN|Infinity/);
+    const [p] = circles(render('scatter-plot', chart(pts([0, 0])), { rangeX: 0, rangeY: 0 }), 'point');
+    assert.deepEqual([Number.isFinite(p.cx), Number.isFinite(p.cy)], [true, true], `point drawn at (${p.cx}, ${p.cy})`);
   });
 });
 
