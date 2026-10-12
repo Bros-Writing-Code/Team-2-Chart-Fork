@@ -48,7 +48,7 @@ A test fails if a file has no manifest entry.
 | Suite | Pass | TODO (known bug) | Fail |
 |---|---|---|---|
 | Library | 13 | 4 | 0 |
-| Site + fixtures | 53 | 8 | 0 |
+| Site + fixtures | 52 | 9 | 0 |
 
 The parser handled most of the hostile input correctly: empty files, missing
 columns, words in number columns, blank cells, unclosed quotes, BOM and CRLF line endings,
@@ -85,10 +85,10 @@ Fixture files are in `qa/fixtures/`.
 | BUG-03 | Missing labels print "undefined" | Library call without labels | Default to empty | Charlie |
 | BUG-06 | `null` in JSON shows a raw JavaScript error | `null-point.json` | Validate each point | Nathan |
 | BUG-07 | Hex/binary accepted as numbers (`0x10` → 16) | `hex-binary-values.csv` | Accept decimal only | Nathan |
-| BUG-12 | Values near the float max overflow the axis to Infinity | `huge-values.csv` | Reject a non-finite range | Nathan |
+| BUG-12 | Values near the float max overflow the axis to Infinity | `huge-values.csv` | Reject values over 1e300 | Nathan |
 | BUG-13 | A leading comma gives a misleading error | Manual entry `,1,2` | Same fix as BUG-10 | Nathan |
 | BUG-16 | `// TODO` in the SVG `<style>` silently drops a CSS rule | `plotBase.js` | Use `/* */` | Charlie |
-| BUG-17 | Changing a label attribute after render throws | `setAttribute('x-axis-label', …)` | Fix the selectors | Charlie |
+| BUG-17 | Changing a label attribute after render throws | `setAttribute('x-axis-label', …)` | Fix the selectors | Brian |
 
 ## Manual / exploratory checklist
 

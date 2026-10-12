@@ -26,7 +26,7 @@
     { "file": "single-point.csv", "expect": "ok", "x": [7], "y": [7], "why": "One point" },
     { "file": "identical-x.csv", "expect": "ok", "x": [3, 3, 3], "y": [1, 2, 3], "why": "Vertical line of points" },
     { "file": "unsorted-x.csv", "expect": "ok", "x": [3, 1, 2], "y": [9, 1, 4], "renderBug": "BUG-01", "why": "Line chart zig-zags because points are not sorted by X" },
-    { "file": "huge-values.csv", "expect": "ok", "x": [1, 2], "y": [1e300, 1.7e308], "renderBug": "BUG-12", "why": "Axis range overflows to Infinity; Y ticks vanish" },
+    { "file": "huge-values.csv", "expect": "error", "error": "too large", "parseBug": "BUG-12", "why": "Values near the float max should get a clear error, not an axis that overflows to Infinity" },
     { "file": "tiny-values.csv", "expect": "ok", "x": [1, 2], "y": [0.000001, 0.000002], "why": "Very small values" },
     { "file": "semicolon-delimited.csv", "expect": "error", "error": "two columns", "why": "European-style ; delimiter is not supported (clear error is acceptable)" },
     { "file": "tab-delimited.csv", "expect": "error", "error": "two columns", "why": "TSV saved as .csv is not supported (clear error is acceptable)" },
