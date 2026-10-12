@@ -27,9 +27,6 @@ jobs:
         working-directory: ./zing-plot-plus-plus
       - name: Test
         run: npm test
-        working-directory: ./zing-plot-plus-plus
-      # npm is the source of truth: publish only versions it doesn't have yet,
-      # and skip (green, not failed) when the version wasn't bumped.
       - name: Publish
         run: |
           VERSION=$(node -p "require('./package.json').version")
