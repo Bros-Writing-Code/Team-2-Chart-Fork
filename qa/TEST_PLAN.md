@@ -47,7 +47,7 @@ A test fails if a file has no manifest entry.
 
 | Suite | Pass | TODO (known bug) | Fail |
 |---|---|---|---|
-| Library | 13 | 4 | 0 |
+| Library | 14 | 3 | 0 |
 | Site + fixtures | 52 | 9 | 0 |
 
 The parser handled most of the hostile input correctly: empty files, missing
@@ -57,7 +57,7 @@ input that parses fine still draws a broken or blank chart.
 
 ## Bugs found
 
-15 open bugs. Owners follow the meeting-notes roles; reassign in GitHub issues as needed.
+14 open bugs. BUG-01 (line chart not sorted by X) was fixed by David in #3. Owners follow the meeting-notes roles; reassign in GitHub issues as needed.
 Fixture files are in `qa/fixtures/`.
 
 ### High: fix first
@@ -70,7 +70,6 @@ Fixture files are in `qa/fixtures/`.
 
 | ID | Problem | Reproduce | Fix | Owner |
 |---|---|---|---|---|
-| BUG-01 | Line chart isn't sorted by X, so it zig-zags | `unsorted-x.csv` (line tab) | Sort points by X | David |
 | BUG-04 | A single point at (0, 0) gives NaN coordinates and a blank chart | `single-point-origin.csv` | Treat a zero range as 1 | Charlie |
 | BUG-08 | Imported titles/labels have no length limit; 100k characters overflow the chart | `title-100k-chars.json` | Apply the form's limits | Nathan |
 | BUG-09 | A numeric JSON title breaks Save | `numeric-title.json`, then Save | Convert the title to a string | Nathan |

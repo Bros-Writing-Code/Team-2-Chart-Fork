@@ -88,9 +88,7 @@ describe('line-plot', () => {
     assert.deepEqual(polyline(render('line-plot', chart([]))), []);
   });
 
-  test('connects points in X order even when the input is unsorted', {
-    todo: 'BUG-01: the design calls for sorting by X first, but LinePlotElement draws in input order',
-  }, () => {
+  test('connects points in X order even when the input is unsorted', () => {
     const xs = polyline(render('line-plot', chart(pts([3, 1], [1, 2], [2, 3])))).map(([x]) => x);
     assert.deepEqual(xs, [...xs].sort((a, b) => a - b));
   });
