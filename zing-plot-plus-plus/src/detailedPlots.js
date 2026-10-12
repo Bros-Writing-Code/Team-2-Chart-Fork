@@ -20,15 +20,16 @@ class ScatterPlotElement extends PlotBaseElement {
  */
 class LinePlotElement extends PlotBaseElement {
     applyPlotElements(chartData, sizes, margin, scaleX, scaleY) { 
+      const sorted = [...chartData.points].sort((a, b) => a.coordinate[0] - b.coordinate[0]);
       //plotting lines - https://www.w3.org/TR/SVG/shapes.html#PolylineElement
       let points = ``;
-      chartData.points.forEach(p => {
+      sorted.forEach(p => {
         const [px, py] = p.coordinate;
         points += `${scaleX(px)},${scaleY(py)} `
       });
       return `<g clip-path="url(#plot-clip)"> <polyline fill="none" stroke="var(--chart-color-theme, #3498db)" stroke-width="2" points="${points}"/>${
         // Add transparent circles at each data point for interactivity
-        chartData.points.map(p => {
+        sorted.map(p => {
           const [px, py] = p.coordinate;
           return `<circle cx="${scaleX(px)}" cy="${scaleY(py)}" r="${sizes.pointRadius}" fill="transparent" stroke="none" data-x="${px}" data-y="${py}" class="line-plot-point" />`;
         }).join('')
