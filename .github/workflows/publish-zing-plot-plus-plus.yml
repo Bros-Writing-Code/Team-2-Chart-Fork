@@ -27,7 +27,7 @@ jobs:
         run: echo "CURRENT_VERSION=$(node -p "require('./zing-plot-plus-plus/package.json').version")" >> $GITHUB_ENV
       - name: Compare versions
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_ACTION_REPO_ACCESS_TOKEN }}
           OPTIONAL_LAST_VERSION: ${{ vars.LAST_VERSION }}
         run: |
           LAST_VERSION="${OPTIONAL_LAST_VERSION:-none}"
@@ -41,7 +41,7 @@ jobs:
           fi
       - name: Set publish version in variables
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_ACTION_REPO_ACCESS_TOKEN }}
         run: gh variable set LAST_VERSION -b "$CURRENT_VERSION"
       - name: Update npm
         run: npm install -g npm@latest
