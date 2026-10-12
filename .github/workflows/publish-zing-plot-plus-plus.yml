@@ -27,6 +27,7 @@ jobs:
         working-directory: ./zing-plot-plus-plus
       - name: Test
         run: npm test
+        working-directory: ./zing-plot-plus-plus
       - name: Publish
         run: |
           VERSION=$(node -p "require('./package.json').version")
