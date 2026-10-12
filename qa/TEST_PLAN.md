@@ -48,7 +48,7 @@ A test fails if a file has no manifest entry.
 | Suite | Pass | TODO (known bug) | Fail |
 |---|---|---|---|
 | Library | 14 | 5 | 0 |
-| Site + fixtures | 51 | 8 | 0 |
+| Site + fixtures | 53 | 8 | 0 |
 
 The parser handled most of the hostile input correctly: empty files, missing
 columns, words in number columns, blank cells, unclosed quotes, BOM and CRLF line endings,
@@ -63,15 +63,14 @@ Severity: **High** = wrong or unsafe output on realistic input · **Med** = visi
 | ID | Sev | Area | Bug | Repro | Suggested fix | Suggested owner |
 |---|---|---|---|---|---|---|
 | BUG-02 | High | Library | Title and axis labels are inserted into the SVG as raw HTML. A CSV header like `<img src=x onerror=…>` **runs JavaScript** and wipes out every data point. Even `a < b` breaks the chart. | Upload `qa/fixtures/html-in-header.csv` | Escape title/labels in `generateGraph` (script.js already has an unused `escapeXML`; move it into the library) | Charlie |
-| BUG-11 | High | Site | Axes always start at 0 (`renderChart` passes anchor `0,0` and range = max + 10%). All-negative data gives a **blank chart**, and mixed-sign data hides the negative points. | Upload `all-negative.csv` (0/3 points visible) or `mixed-sign.csv` (1/3) | Anchor at `min − padding`, range = `(max − min) + 2·padding` | Nathan / Jessie |
 | BUG-01 | Med | Library | Line chart connects points in input order. Agreed design was "sort by X first", so unsorted data zig-zags. | Line tab, upload `unsorted-x.csv` | Sort a copy: `[...points].sort((a, b) => a.coordinate[0] - b.coordinate[0])` | David |
-| BUG-04 | Med | Library + Site | A range of 0 divides by zero, so coordinates are `NaN` and the chart is blank with no ticks. Happens with a single point at the origin. | Upload `single-point-origin.csv` | Library: treat range 0 as 1. Site: fix together with BUG-11 | Charlie |
+| BUG-04 | Med | Library + Site | A range of 0 divides by zero, so coordinates are `NaN` and the chart is blank with no ticks. Happens with a single point at the origin. | Upload `single-point-origin.csv` | Library: treat range 0 as 1. Site: pad the range when min equals max | Charlie |
 | BUG-08 | Med | Site | Form limits title to 100 chars and labels to 60, but imported files have no limit. A 100,000-char title renders 1.4 million px wide. | Upload `title-100k-chars.json` or `header-100k-chars.csv` | Truncate or reject on import, same limits as the form | Nathan |
 | BUG-09 | Med | Site | A non-string JSON title (e.g. `12345`) is accepted, then **Save fails** ("Could not save the chart") because `title.replace` isn't a function. | Upload `numeric-title.json`, click Save | `String(value.title)` in `parseJSON` | Nathan |
 | BUG-10 | Med | Site | Trailing comma in manual entry adds a phantom `0`: `1, 2, 3,` → `[1, 2, 3, 0]`. | Type `1, 2, 3,` in X and Y, Generate | `.split(…).filter(Boolean)` in `numbers()` | Nathan |
 | BUG-14 | Med | CI | Publish workflow fails (red ✗) on every push to main that doesn't bump the version (e.g. runs for `2626a12`, `d067559`). | GitHub Actions history | Skip publish when `npm view zing-plot-plus-plus@<version>` already exists | Brian |
 | BUG-15 | Med | Packaging | `package.json` `main` and `start` point to `src/components.js`, which doesn't exist; `src/index.js` is a hello-world. `import 'zing-plot-plus-plus'` fails (the site only works because it loads `src/detailedPlots.js` by URL). | `node -e "import('zing-plot-plus-plus')"` after install | Point `main` at `src/detailedPlots.js` (and export the classes) | Brian |
-| BUG-05 | Low | Library | Tooltip shows every negative number in scientific notation (`-5` → `-5.00e+0`) because the "tiny number" check doesn't use `Math.abs`. | Hover a negative point | Compare `Math.abs(num)` | Brian |
+| BUG-05 | Low | Library | Tooltip shows every negative number in scientific notation (`-5` → `-5.00e+0`) because the "tiny number" check doesn't use `Math.abs`. | Call `formatValue('-5')` (the site no longer allows negatives, but other library users can pass them) | Compare `Math.abs(num)` | Brian |
 | BUG-03 | Low | Library | Missing title/label prints the literal text `undefined`. | Call the library without labels | Default to `''` | Charlie |
 | BUG-06 | Low | Site | A `null` inside a JSON point array shows a raw JS error: "Cannot read properties of null (reading 'x')". | Upload `null-point.json` | Validate entries in `parseJSON` | Nathan |
 | BUG-07 | Low | Site | Hex/binary literals are accepted as numbers (`0x10` → 16, `0b11` → 3). | Upload `hex-binary-values.csv` | Accept only decimal / scientific notation | Nathan |
@@ -80,8 +79,14 @@ Severity: **High** = wrong or unsafe output on realistic input · **Med** = visi
 | BUG-16 | Low | Library | `// TODO` inside the SVG `<style>` isn't a CSS comment; the browser drops the `.plot-line` rule after it. | Read `plotBase.js` `<style>` | Use `/* … */` | Charlie |
 | BUG-17 | Low | Library | Changing `title` / `x-axis-label` / `y-axis-label` attributes after render throws `Cannot set properties of null`. The selectors look for tags (`'title-text'`) instead of classes, and the label `<text>` elements have no distinguishing class. | `chart.setAttribute('x-axis-label', 'New')` | Add ids/classes to the text elements and select those | Charlie |
 
-Fix order recommendation: **BUG-02 and BUG-11 first** (security, and blank charts on
-ordinary data), then BUG-01 and BUG-04, since they break the two core chart types.
+Fix order recommendation: **BUG-02 first** (security), then BUG-01 and BUG-04, since they
+break the two core chart types.
+
+## Resolved
+
+| ID | Resolution | Covered by |
+|---|---|---|
+| BUG-11 | **Decision: negative values are not supported.** The axes always start at 0, so negative points were drawn off-chart (a blank chart for all-negative data). `validate()` in `script.js` now rejects any negative X or Y with "Negative values are not supported. Please use X and Y values of 0 or greater." It covers both manual entry and file upload, and the previous chart stays on screen. Verified in the browser. | `all-negative.csv`, `mixed-sign.csv` fixtures; `validate()` unit tests |
 
 ## Manual / exploratory checklist
 

@@ -63,6 +63,16 @@ describe('validate()', () => {
     }
   });
 
+  test('rejects negative values in X or Y with a clear notice (not supported)', () => {
+    const notice = /Negative values are not supported/;
+    assert.throws(() => site.validate({ ...base, x: [-1, 2], y: [1, 2] }), notice);
+    assert.throws(() => site.validate({ ...base, x: [1, 2], y: [1, '-0.5'] }), notice);
+  });
+
+  test('allows zero', () => {
+    assert.deepEqual(plain(site.validate({ ...base, x: [0, 1], y: ['0', 2] })).y, [0, 2]);
+  });
+
   test('allows 10,000 points and rejects 10,001', () => {
     const range = (n) => Array.from({ length: n }, (_, i) => i);
     assert.equal(site.validate({ ...base, x: range(10000), y: range(10000) }).x.length, 10000);
