@@ -26,8 +26,14 @@ jobs:
       - name: Get the current package version
         run: echo "CURRENT_VERSION=$(node -p "require('./zing-plot-plus-plus/package.json').version")" >> $GITHUB_ENV
       - name: Compare versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPTIONAL_LAST_VERSION: ${{ vars.LAST_VERSION }}
         run: |
-          if [ "$CURRENT_VERSION" != "${{ vars.LAST_VERSION }}" ]; then
+          LAST_VERSION="${OPTIONAL_LAST_VERSION:-none}"
+          echo "Current Version: $CURRENT_VERSION"
+          echo "Last Version saved: $LAST_VERSION"
+          if [ "$CURRENT_VERSION" != "$LAST_VERSION" ]; then
             echo "Versions are different. Proceeding with publish."
           else
             echo "Versions are the same. Skipping publish."
