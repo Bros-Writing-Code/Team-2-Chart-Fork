@@ -27,7 +27,7 @@ Choose the installation method that works best for your needs.
 You can include the library directly in your HTML using a CDN:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/zing-plot-plus-plus@latest/dist/zing-plot-plus-plus.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/zing-plot-plus-plus@latest/src/detailedPlots.js" type="module" defer></script>
 ```
 
 ### 📦 Using npm
