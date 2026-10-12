@@ -6,8 +6,8 @@
 /**
  * @typedef {object} ChartData
  * @property {string} title - The title of the chart
- * @property {string} "x-axis-label" - The label for the X axis
- * @property {string} "y-axis-label" - The label for the Y axis
+ * @property {string} `x-axis-label` - The label for the X axis
+ * @property {string} `y-axis-label` - The label for the Y axis
  * @property {Array<Point>} points - An array of points to display on the chart
  */
 
@@ -160,7 +160,7 @@ class PlotBaseElement extends HTMLElement {
   }
 
   /** A shortcut method to set all the chart properties at once.
-   * @param {Object} chartData - The data for the chart.
+   * @param {ChartData} chartData - The data for the chart.
    * @param {number} width - The width of the chart.
    * @param {number} height - The height of the chart.
    * @param {boolean} centerOrigin - Whether to center the origin of the chart.
