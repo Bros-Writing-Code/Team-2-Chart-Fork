@@ -1,0 +1,109 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>scatter bench</title></head>
+<body>
+<div id="host"></div>
+<pre id="out"></pre>
+<script>
+// Scatter-plot renderer benchmark: SVG (as the library does it today) vs Canvas 2D vs WebGL.
+// Every measurement is synchronous and forces the renderer to finish:
+//   SVG    -> innerHTML parse + forced layout (getBoundingClientRect). Paint NOT included (favours SVG).
+//   Canvas -> draw + getImageData(1x1) to flush the pipeline.
+//   WebGL  -> upload + draw + readPixels(1x1) to flush the GPU.
+const W = 500, H = 500, R = 4, RUNS = 5;
+const SIZES = [100, 1000, 10000, 50000, 100000];
+const host = document.getElementById('host');
+
+function rng(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+function makePoints(n) { const r = rng(42); const a = new Float32Array(n * 2); for (let i = 0; i < a.length; i++) a[i] = r() * 10; return a; }
+const sx = v => 100 + v / 10 * 375, sy = v => 40 + 400 - v / 10 * 400;
+const median = a => a.slice().sort((x, y) => x - y)[a.length >> 1];
+
+function svg(pts) {
+  const t0 = performance.now();
+  let s = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg"><style>.point{fill:#3498db;stroke:#3498db;opacity:.8}</style><g>`;
+  for (let i = 0; i < pts.length; i += 2)
+    s += `<circle cx="${sx(pts[i])}" cy="${sy(pts[i + 1])}" r="${R}" data-x="${pts[i]}" data-y="${pts[i + 1]}" class="point" />`;
+  s += `</g></svg>`;
+  host.innerHTML = s;
+  host.querySelector('circle:last-child')?.getBoundingClientRect();
+  const t = performance.now() - t0;
+  const nodes = host.getElementsByTagName('*').length;
+  return { t, nodes, bytes: s.length };
+}
+
+let cnv, ctx;
+function canvas2d(pts) {
+  const t0 = performance.now();
+  if (!cnv) { cnv = document.createElement('canvas'); cnv.width = W; cnv.height = H; ctx = cnv.getContext('2d', { willReadFrequently: false }); }
+  ctx.clearRect(0, 0, W, H);
+  ctx.globalAlpha = 0.8; ctx.fillStyle = '#3498db';
+  ctx.beginPath();
+  for (let i = 0; i < pts.length; i += 2) { const x = sx(pts[i]), y = sy(pts[i + 1]); ctx.moveTo(x + R, y); ctx.arc(x, y, R, 0, 6.2832); }
+  ctx.fill();
+  ctx.getImageData(0, 0, 1, 1);
+  return { t: performance.now() - t0, nodes: 1, bytes: 0 };
+}
+
+let gl, prog, buf, loc;
+function webgl(pts) {
+  const t0 = performance.now();
+  if (!gl) {
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    gl = c.getContext('webgl', { preserveDrawingBuffer: true });
+    if (!gl) return null;
+    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+    prog = gl.createProgram();
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, `attribute vec2 p; void main(){ vec2 px = vec2(100.0 + p.x/10.0*375.0, 440.0 - p.y/10.0*400.0); gl_Position = vec4(px.x/250.0-1.0, 1.0-px.y/250.0, 0, 1); gl_PointSize = ${R * 2}.0; }`));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, `precision mediump float; void main(){ if (length(gl_PointCoord-0.5) > 0.5) discard; gl_FragColor = vec4(0.204,0.596,0.859,0.8); }`));
+    gl.linkProgram(prog); gl.useProgram(prog);
+    buf = gl.createBuffer(); loc = gl.getAttribLocation(prog, 'p');
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, pts, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  gl.clearColor(1, 1, 1, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.drawArrays(gl.POINTS, 0, pts.length / 2);
+  gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+  return { t: performance.now() - t0, nodes: 1, bytes: 0 };
+}
+
+// Hover hit-testing: 1000 random mouse positions.
+//   SVG: browser's elementFromPoint (what the mouseover listener relies on).
+//   Canvas: brute-force nearest scan, and a uniform grid index (built once).
+function hitSvg(pts) {
+  const r = rng(7), b = host.getBoundingClientRect(); const t0 = performance.now();
+  for (let k = 0; k < 1000; k++) document.elementFromPoint(b.left + r() * W, b.top + r() * H);
+  return performance.now() - t0;
+}
+function hitBrute(pts) {
+  const r = rng(7); const t0 = performance.now();
+  for (let k = 0; k < 1000; k++) { const mx = r() * W, my = r() * H; let best = -1, bd = R * R;
+    for (let i = 0; i < pts.length; i += 2) { const dx = sx(pts[i]) - mx, dy = sy(pts[i + 1]) - my, d = dx * dx + dy * dy; if (d <= bd) { bd = d; best = i; } } }
+  return performance.now() - t0;
+}
+function hitGrid(pts) {
+  const C = 16, cols = Math.ceil(W / C), grid = new Map(); const tb = performance.now();
+  for (let i = 0; i < pts.length; i += 2) { const k = ((sy(pts[i + 1]) / C) | 0) * cols + ((sx(pts[i]) / C) | 0); (grid.get(k) || grid.set(k, []).get(k)).push(i); }
+  const build = performance.now() - tb;
+  const r = rng(7); const t0 = performance.now();
+  for (let k = 0; k < 1000; k++) { const mx = r() * W, my = r() * H, cx = (mx / C) | 0, cy = (my / C) | 0; let best = -1, bd = R * R;
+    for (let gy = cy - 1; gy <= cy + 1; gy++) for (let gx = cx - 1; gx <= cx + 1; gx++) { const cell = grid.get(gy * cols + gx); if (!cell) continue;
+      for (const i of cell) { const dx = sx(pts[i]) - mx, dy = sy(pts[i + 1]) - my, d = dx * dx + dy * dy; if (d <= bd) { bd = d; best = i; } } } }
+  return { build, query: performance.now() - t0 };
+}
+
+const rows = [];
+for (const n of SIZES) {
+  const pts = makePoints(n);
+  const s = [], c = [], g = [];
+  let meta;
+  for (let i = 0; i < RUNS; i++) { meta = svg(pts); s.push(meta.t); c.push(canvas2d(pts).t); const w = webgl(pts); if (w) g.push(w.t); }
+  const hs = hitSvg(pts); host.innerHTML = '';
+  const hb = hitBrute(pts), hg = hitGrid(pts);
+  rows.push({ n, svgMs: median(s), canvasMs: median(c), webglMs: g.length ? median(g) : null,
+    svgNodes: meta.nodes, svgMarkupKB: Math.round(meta.bytes / 1024),
+    hitSvg1000Ms: hs, hitBrute1000Ms: hb, hitGridBuildMs: hg.build, hitGrid1000Ms: hg.query });
+}
+document.getElementById('out').textContent = 'RESULTS' + JSON.stringify({ ua: navigator.userAgent, rows }) + 'END';
+</script>
+</body></html>
