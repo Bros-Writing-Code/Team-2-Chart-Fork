@@ -130,17 +130,19 @@ describe('chart base (axes, labels, ticks)', () => {
     assert.deepEqual(shown.map(decode), input);
   });
 
-  test('omitted labels render as empty, not the text "undefined"', {
-    todo: 'BUG-03: a missing title or axis label is printed as "undefined"',
-  }, () => {
+  test('omitted labels render as empty, not the text "undefined"', () => {
     assert.deepEqual(labelTexts(render('scatter-plot', { points: [] })), ['', '', '']);
   });
 
-  test('a zero-width range (e.g. a single point at x=0) produces no NaN coordinates', {
-    todo: 'BUG-04: rangeX/rangeY of 0 divides by zero; the site passes 0 for a single point at the origin',
-  }, () => {
+  test('a zero-width range (e.g. a single point at x=0) produces no NaN coordinates', () => {
     const [p] = circles(render('scatter-plot', chart(pts([0, 0])), { rangeX: 0, rangeY: 0 }), 'point');
     assert.deepEqual([Number.isFinite(p.cx), Number.isFinite(p.cy)], [true, true], `point drawn at (${p.cx}, ${p.cy})`);
+  });
+
+  test('the <style> block uses only /* */ comments', () => {
+    // "//" is not a CSS comment; it silently swallows the rule after it (BUG-16).
+    const [, css] = render('scatter-plot', chart([])).match(/<style>([\s\S]*?)<\/style>/);
+    assert.doesNotMatch(css.replace(/\/\*[\s\S]*?\*\//g, ''), /\/\//);
   });
 });
 
