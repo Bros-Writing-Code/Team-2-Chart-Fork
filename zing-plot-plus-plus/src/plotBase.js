@@ -12,6 +12,16 @@
  */
 
 /**
+ * Escapes text so it is displayed literally when inserted into SVG markup.
+ * @param {*} value - The text to escape.
+ * @returns {string} - The escaped text.
+ */
+function escapeXML(value) {
+  const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' };
+  return String(value).replace(/[&<>"']/g, (char) => entities[char]);
+}
+
+/**
  * A custom element representing a plottable scatter plot.
  * @property {Array<Point>} points - The data points to plot.
  * @property {string} title - The title of the chart.
@@ -363,9 +373,9 @@ class PlotBaseElement extends HTMLElement {
     const yLabelY = margin.top + (sizes.plotHeight / 2);
 
     svg += `
-          <text x="${x / 2}" y="${titleY}" class="title-text">${chartData.title}</text>
-          <text x="${margin.left + (sizes.plotWidth / 2)}" y="${xLabelY}" class="label-text">${chartData['x-axis-label']}</text>
-          <text x="${yLabelX}" y="${yLabelY}" class="label-text" transform="rotate(-90, ${yLabelX}, ${yLabelY})">${chartData['y-axis-label']}</text>
+          <text x="${x / 2}" y="${titleY}" class="title-text">${escapeXML(chartData.title)}</text>
+          <text x="${margin.left + (sizes.plotWidth / 2)}" y="${xLabelY}" class="label-text">${escapeXML(chartData['x-axis-label'])}</text>
+          <text x="${yLabelX}" y="${yLabelY}" class="label-text" transform="rotate(-90, ${yLabelX}, ${yLabelY})">${escapeXML(chartData['y-axis-label'])}</text>
       `;
 
     // Let subclasses implement their own plot elements.

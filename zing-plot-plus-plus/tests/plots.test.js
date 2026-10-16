@@ -120,9 +120,7 @@ describe('chart base (axes, labels, ticks)', () => {
     assert.match(svg, />2\.00e\+6</);
   });
 
-  test('escapes markup in the title and labels', {
-    todo: 'BUG-02: title/labels are inserted into innerHTML unescaped (broken SVG, and script injection from an uploaded file)',
-  }, () => {
+  test('escapes markup in the title and labels', () => {
     // Any valid escaping passes: no raw "<" reaches the markup, and the text decodes back unchanged.
     const input = ['<img src=x onerror=alert(1)>', 'a < b & c'];
     const svg = render('scatter-plot', chart([], { title: input[0], 'x-axis-label': input[1] }));
