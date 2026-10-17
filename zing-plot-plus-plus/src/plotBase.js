@@ -12,6 +12,16 @@
  */
 
 /**
+ * Escapes text so it is displayed literally when inserted into SVG markup.
+ * @param {*} value - The text to escape.
+ * @returns {string} - The escaped text.
+ */
+function escapeXML(value) {
+  const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' };
+  return String(value).replace(/[&<>"']/g, (char) => entities[char]);
+}
+
+/**
  * A custom element representing a plottable scatter plot.
  * @property {Array<Point>} points - The data points to plot.
  * @property {string} title - The title of the chart.
@@ -252,6 +262,10 @@ class PlotBaseElement extends HTMLElement {
       gridDash: Math.max(minDim * 0.008, 2)
     };
 
+    // A zero range (e.g. a single point at the origin) would divide by zero, so treat it as 1
+    if (rangeX === 0) rangeX = 1;
+    if (rangeY === 0) rangeY = 1;
+
     // calculate domain of graph
     let domainMinX, domainMaxX, domainMinY, domainMaxY;
     if (center === true) {
@@ -313,7 +327,7 @@ class PlotBaseElement extends HTMLElement {
           <style>
               .grid-line { stroke: #e0e0e0; stroke-width: ${sizes.gridStroke}; stroke-dasharray: ${sizes.gridDash}; }
               .axis-line { stroke: #333; stroke-width: ${sizes.axisStroke}; }
-              // TODO: Plotted line style
+              /* TODO: Plotted line style */
               .plot-line { stroke: #111; stroke-width: ${sizes.axisStroke}; }
               .axis-text { font-family: sans-serif; font-size: ${sizes.tickFont}px; fill: #555; text-anchor: middle; }
               .label-text { font-family: sans-serif; font-size: ${sizes.labelFont}px; font-weight: bold; fill: #333; text-anchor: middle; }
@@ -363,9 +377,9 @@ class PlotBaseElement extends HTMLElement {
     const yLabelY = margin.top + (sizes.plotHeight / 2);
 
     svg += `
-          <text x="${x / 2}" y="${titleY}" class="title-text">${chartData.title}</text>
-          <text x="${margin.left + (sizes.plotWidth / 2)}" y="${xLabelY}" class="label-text">${chartData['x-axis-label']}</text>
-          <text x="${yLabelX}" y="${yLabelY}" class="label-text" transform="rotate(-90, ${yLabelX}, ${yLabelY})">${chartData['y-axis-label']}</text>
+          <text x="${x / 2}" y="${titleY}" class="title-text">${escapeXML(chartData.title ?? '')}</text>
+          <text x="${margin.left + (sizes.plotWidth / 2)}" y="${xLabelY}" class="label-text">${escapeXML(chartData['x-axis-label'] ?? '')}</text>
+          <text x="${yLabelX}" y="${yLabelY}" class="label-text" transform="rotate(-90, ${yLabelX}, ${yLabelY})">${escapeXML(chartData['y-axis-label'] ?? '')}</text>
       `;
 
     // Let subclasses implement their own plot elements.
