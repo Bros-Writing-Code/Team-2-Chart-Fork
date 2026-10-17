@@ -119,8 +119,23 @@ cd zing-plot-plus-plus && npm test
 | `canvasScatterPlot.test.js` | keeps the SVG axes and labels but has no SVG points | Frame still built, no `<circle>`s |
 | | draws each point on the same pixel as `<scatter-plot>` does | Canvas matches SVG exactly |
 | | clips the points to the plot area | Points can't draw over the axes |
+| `canvasScatterPlot.10k.test.js` | draws 10,000 points correctly | All 10,000 points (the website's limit) are drawn on the same pixels as `<scatter-plot>`, and the markup is far smaller. Prints stats (below). |
 
-There is no browser in Node, so the tests use a **fake canvas context**: a small hand-written object that records what would be drawn. CI runs these on every push. Current result: **23 pass, 0 fail**.
+There is no browser in Node, so the tests use a **fake canvas context**: a small hand-written object that records what would be drawn. CI runs these on every push. Current result: **24 pass, 0 fail**.
+
+### 10,000-point stats
+
+The 10k test prints these every time it runs (`npm test` shows them as `ℹ` lines). Example run, median of 5:
+
+| | `<scatter-plot>` (SVG) | `<canvas-scatter-plot>` |
+|---|---|---|
+| Time to build the SVG | 14.7 ms | 0.3 ms (frame only) |
+| SVG markup size | 1,307 KB | 3 KB (**379× smaller**) |
+| Page elements for the points | 10,000 `<circle>`s | 1 `<canvas>` |
+| Time to issue the canvas drawing calls | — | 3.0 ms |
+| Points on the same pixels | — | ✅ all 10,000 |
+
+Timings vary by machine, so the test reports them rather than failing on them. The only time check is a generous 1-second limit on drawing, to catch an accidental big slowdown. These numbers come from Node with a fake canvas: they show how much work our code does, not how long the browser takes to paint. The SVG side also still has to be parsed and laid out by the browser, which isn't included here. For real browser timings, see `bench/browser-bench.html` in [PLAN.md §4b](PLAN.md#4b-in-browser-benchmark-to-run).
 
 ## Known limits
 

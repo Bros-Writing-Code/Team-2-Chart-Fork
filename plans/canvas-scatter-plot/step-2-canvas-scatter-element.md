@@ -16,6 +16,7 @@ Adds a new, standalone chart element, `<canvas-scatter-plot>`. It looks like `<s
 |---|---|---|
 | `zing-plot-plus-plus/src/canvasScatterPlot.js` | **New** | The `<canvas-scatter-plot>` element |
 | `zing-plot-plus-plus/tests/canvasScatterPlot.test.js` | **New** | 3 unit tests |
+| `zing-plot-plus-plus/tests/canvasScatterPlot.10k.test.js` | **New** | 10,000-point test that also prints speed and size stats |
 
 ## How it works
 
@@ -61,9 +62,11 @@ Same `setChartProperties(...)` call as `<scatter-plot>`. Only the tag name and t
 | draws each point on the same pixel as `<scatter-plot>` does | Canvas circles match the SVG circles exactly (position and radius) |
 | clips the points to the plot area | The clip rectangle is the plot area (80, 32, 400×320 for a 500×400 chart) |
 
+| draws 10,000 points correctly (`canvasScatterPlot.10k.test.js`) | At the website's 10,000-point limit: every point drawn on the same pixel as `<scatter-plot>`, no SVG circles, and much smaller markup. Prints stats; see [README › 10,000-point stats](README.md#10000-point-stats). |
+
 `renderGraph()` itself (creating the canvas in the page) needs a real browser, so it's checked by hand. See below.
 
-Library suite: **23 pass, 0 fail, 0 TODO** (20 before + 3 new).
+Library suite: **24 pass, 0 fail, 0 TODO** (20 before + 4 new).
 
 ## Effect on the rest of the code
 
