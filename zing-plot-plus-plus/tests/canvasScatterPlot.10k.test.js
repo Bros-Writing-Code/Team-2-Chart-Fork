@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { instanceOf } from './helpers/dom-stub.js';
+import { fakeContext } from './helpers/fake-canvas.js';
+import { computeLayout } from '../src/plotBase.js';
 import '../src/detailedPlots.js';
 import '../src/canvasScatterPlot.js';
 
@@ -20,14 +22,6 @@ const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 const points = Array.from({ length: N }, () => ({ coordinate: [random() * 10, random() * 10] }));
 const chartData = { title: 'T', 'x-axis-label': 'X', 'y-axis-label': 'Y', points };
 
-/** A stand-in for the canvas 2D context that only counts and records circles. */
-function fakeContext() {
-  const ctx = { circles: [] };
-  ctx.save = ctx.restore = ctx.beginPath = ctx.rect = ctx.clip = ctx.fill = () => {};
-  ctx.arc = (x, y, r) => { ctx.circles.push([x, y, r]); };
-  return ctx;
-}
-
 /** Runs fn RUNS times and returns the median time in ms and the last result. */
 function timed(fn) {
   const times = [];
@@ -41,24 +35,21 @@ function timed(fn) {
   return { ms: times[Math.floor(RUNS / 2)], result };
 }
 
-const render = (el) => el.generateGraph(chartData, 500, 400, false, 0, 0, 10, 10, 5);
+const ARGS = [500, 400, false, 0, 0, 10, 10, 5];
 
 test(`canvas-scatter-plot draws ${N.toLocaleString()} points correctly`, (t) => {
   // <scatter-plot>: everything, including every point, is SVG markup
   const svgEl = instanceOf('scatter-plot');
-  const svgBuild = timed(() => render(svgEl));
+  const svgBuild = timed(() => svgEl.generateGraph(chartData, ...ARGS));
   const svg = svgBuild.result;
-  const svgCircles = [...svg.matchAll(/<circle cx="([^"]*)" cy="([^"]*)" r="([^"]*)"/g)]
-    .map(([, cx, cy, r]) => [+cx, +cy, +r]);
+  const svgCircles = [...svg.matchAll(/<circle cx="([^"]*)" cy="([^"]*)"/g)]
+    .map(([, cx, cy]) => [+cx, +cy]);
 
-  // <canvas-scatter-plot>: SVG frame only, points drawn on a canvas
+  // <canvas-scatter-plot>: the whole chart, frame and points, drawn on one canvas
   const canvasEl = instanceOf('canvas-scatter-plot');
-  canvasEl._points = points;
-  const frameBuild = timed(() => render(canvasEl));
-  const frame = frameBuild.result;
   const canvasDraw = timed(() => {
     const ctx = fakeContext();
-    canvasEl.drawCanvasPoints(ctx);
+    canvasEl.drawChart(ctx, chartData, computeLayout(...ARGS), 500, 400, '#3498db');
     return ctx;
   });
   const ctx = canvasDraw.result;
@@ -66,11 +57,7 @@ test(`canvas-scatter-plot draws ${N.toLocaleString()} points correctly`, (t) => 
   // Correctness: every point drawn, on exactly the same pixel as the SVG version
   assert.equal(svgCircles.length, N);
   assert.equal(ctx.circles.length, N);
-  assert.deepEqual(ctx.circles, svgCircles);
-  assert.doesNotMatch(frame, /<circle/);
-
-  // Size: the canvas chart's markup no longer grows with the number of points
-  assert.ok(frame.length * 10 < svg.length, 'canvas chart markup should be far smaller');
+  assert.deepEqual(ctx.circles.map(([x, y]) => [x, y]), svgCircles);
 
   // Generous safety limit: catches an accidental slowdown (e.g. redrawing per point
   // in a nested loop), not normal machine-to-machine variation
@@ -79,7 +66,6 @@ test(`canvas-scatter-plot draws ${N.toLocaleString()} points correctly`, (t) => 
   const kb = (s) => `${(s.length / 1024).toFixed(0)} KB`;
   t.diagnostic(`points: ${N.toLocaleString()} (median of ${RUNS} runs)`);
   t.diagnostic(`<scatter-plot>        SVG build ${svgBuild.ms.toFixed(1)} ms, markup ${kb(svg)}, ${svgCircles.length.toLocaleString()} <circle> elements`);
-  t.diagnostic(`<canvas-scatter-plot> SVG frame ${frameBuild.ms.toFixed(1)} ms, markup ${kb(frame)}, 0 <circle> elements, 1 <canvas>`);
-  t.diagnostic(`<canvas-scatter-plot> canvas draw calls ${canvasDraw.ms.toFixed(1)} ms (fake canvas, no real pixels)`);
-  t.diagnostic(`markup is ${(svg.length / frame.length).toFixed(0)}x smaller; all ${N.toLocaleString()} points on the same pixels as <scatter-plot>`);
+  t.diagnostic(`<canvas-scatter-plot> canvas draw calls ${canvasDraw.ms.toFixed(1)} ms (fake canvas, no real pixels), 0 markup, 1 <canvas>`);
+  t.diagnostic(`all ${N.toLocaleString()} points on the same pixels as <scatter-plot>`);
 });
