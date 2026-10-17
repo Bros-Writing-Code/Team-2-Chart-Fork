@@ -1,6 +1,6 @@
 # Plan: Scatter Plot Rendering, SVG → Canvas
 
-> Status: **In progress, step 2 of 6.**
+> Status: **Step 3 done: the whole scatter chart is canvas.**
 > Scope: `<scatter-plot>` in `zing-plot-plus-plus`. `<line-plot>` stays on SVG for now.
 
 ## Progress
@@ -11,12 +11,11 @@ The plan is delivered in very small pushes. Each one has its own short write-up.
 |---|---|---|---|
 | 1 | `drawPoints()` helper + 2 tests (not used by the chart yet) | ✅ Done | [step-1-draw-points.md](step-1-draw-points.md) |
 | 2 | Standalone `<canvas-scatter-plot>` element (`<scatter-plot>` unchanged) | ✅ Done | [step-2-canvas-scatter-element.md](step-2-canvas-scatter-element.md) |
-| 3 | Theme color/opacity, one path for all points, batching test | Next | — |
-| 4 | Hover lookup + tooltip on canvas | Planned | — |
-| 5 | PNG export includes canvas points | Planned | — |
-| 6 | HiDPI, screen-reader label, switch the website to canvas | Planned | — |
+| 3 | Whole chart on canvas (no SVG): hover, PNG export, theme color, HiDPI, screen-reader label, website uses it | ✅ Done | [step-3-full-canvas.md](step-3-full-canvas.md) |
 
 These replace the coarser steps in [§6](#6-implementation-steps). Tests listed in [§7](#7-test-plan) are added in the step that needs them.
+
+> **Change from the original design (step 3).** The team lead asked for the scatter chart to be **fully canvas**, so `<canvas-scatter-plot>` now draws the frame (axes, grid, ticks, title, labels) on the canvas too, not only the points. This replaces the hybrid design in §3 and §5, and merges the old steps 3–6 into one step. `<scatter-plot>` and `<line-plot>` stay SVG. The sections below are kept as the original reasoning.
 
 > **Change from the original design (step 2).** Instead of a `renderer="canvas"` attribute on `<scatter-plot>` (§5.1), the canvas version is a **separate element, `<canvas-scatter-plot>`**, in its own file. It inherits the SVG frame from `PlotBaseElement`, so no existing file is edited and teammates can merge it without conflicts. Folding it into `<scatter-plot>` (as a `renderer` option or a replacement) is a later team decision; the rest of this plan still applies either way.
 

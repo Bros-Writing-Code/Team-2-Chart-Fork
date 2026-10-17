@@ -13,15 +13,15 @@
  */
 export const FEATURES = [
   {
-    name: 'Points drawn on a canvas',
+    name: 'Whole chart on one canvas',
     status: 'done',
-    where: 'Steps 1–2',
-    description: 'All points go on one <canvas> instead of one SVG <circle> each. Axes, grid and labels stay SVG.',
+    where: 'Steps 1–3',
+    description: 'Background, grid, axes, tick numbers, title, labels and points are all drawn on one <canvas>. No SVG.',
   },
   {
     name: 'Same positions as the SVG chart',
     status: 'done',
-    where: 'Step 2',
+    where: 'Steps 2–3',
     description: 'Every canvas point uses the same scales as <scatter-plot>, so it lands on the same pixel.',
     setup(area, { svgChart, canvasChart }) {
       const button = document.createElement('button');
@@ -51,27 +51,58 @@ export const FEATURES = [
   },
   {
     name: 'Theme color and opacity',
-    status: 'planned',
+    status: 'done',
     where: 'Step 3',
-    description: 'Use the --chart-color-theme CSS variable and 0.8 opacity, like the SVG points. Today the points are solid #3498db.',
+    description: 'Points use the --chart-color-theme CSS variable (default #3498db) at 0.8 opacity, like the SVG points.',
+    setup(area, { canvasChart }) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'secondary';
+      button.textContent = 'Toggle theme color';
+      button.addEventListener('click', () => {
+        const on = canvasChart.style.getPropertyValue('--chart-color-theme');
+        canvasChart.style.setProperty('--chart-color-theme', on ? '' : '#c0392b');
+        canvasChart.renderGraph();
+      });
+      area.append(button);
+    },
   },
   {
     name: 'Hover tooltip',
-    status: 'planned',
-    where: 'Step 4',
-    description: 'Find the point under the mouse and show the existing <tool-tip-modal>.',
+    status: 'done',
+    where: 'Step 3',
+    description: 'findPointAt() finds the point under the mouse and shows the existing <tool-tip-modal>. Hover a point on the canvas chart to try it.',
   },
   {
     name: 'PNG export',
-    status: 'planned',
-    where: 'Step 5',
-    description: "Include the canvas points when the website saves a chart as an image. Today's export copies only the SVG.",
+    status: 'done',
+    where: 'Step 3',
+    description: 'toImageCanvas(width, height) draws the whole chart, points included, at any size. The website uses it for Save PNG.',
+    setup(area, { canvasChart }) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'secondary';
+      button.textContent = 'Save PNG (2×)';
+      button.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.href = canvasChart.toImageCanvas(canvasChart._width * 2, canvasChart._height * 2).toDataURL('image/png');
+        link.download = 'canvas-scatter.png';
+        link.click();
+      });
+      area.append(button);
+    },
   },
   {
     name: 'Sharp on HiDPI screens',
-    status: 'planned',
-    where: 'Step 6',
-    description: 'Scale the canvas for Retina and other high-resolution displays so points are crisp.',
+    status: 'done',
+    where: 'Step 3',
+    description: 'The canvas is drawn at the screen\'s pixel density, so text and points are crisp on Retina displays.',
+  },
+  {
+    name: 'Screen-reader label',
+    status: 'done',
+    where: 'Step 3',
+    description: 'The canvas has role="img" and an aria-label summarizing the title, axes and number of points.',
   },
   {
     name: 'Zooming and scrolling',

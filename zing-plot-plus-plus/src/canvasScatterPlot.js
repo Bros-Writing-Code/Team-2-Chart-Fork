@@ -102,9 +102,13 @@ class CanvasScatterPlotElement extends PlotBaseElement {
     };
 
     canvas.addEventListener('mousemove', (e) => {
+      // The page may shrink or grow the chart with CSS (the website uses transform: scale),
+      // so convert between on-screen pixels and the chart's own pixels.
       const box = canvas.getBoundingClientRect();
-      const x = e.clientX - box.left;
-      const y = e.clientY - box.top;
+      const zoomX = box.width / this._width;
+      const zoomY = box.height / this._height;
+      const x = (e.clientX - box.left) / zoomX;
+      const y = (e.clientY - box.top) / zoomY;
       const inPlot = x >= margin.left && x <= margin.left + sizes.plotWidth
         && y >= margin.top && y <= margin.top + sizes.plotHeight;
       // Allow a couple of extra pixels so small points are easy to hit.
@@ -121,12 +125,32 @@ class CanvasScatterPlotElement extends PlotBaseElement {
       // Same spot as the SVG chart: the top-left corner of the point's circle.
       tooltip.setAttribute('x-coordinate', `${px}`);
       tooltip.setAttribute('y-coordinate', `${py}`);
-      tooltip.setAttribute('x-position', `${box.left + window.scrollX + scaleX(px) - radius}`);
-      tooltip.setAttribute('y-position', `${box.top + window.scrollY + scaleY(py) - radius}`);
+      tooltip.setAttribute('x-position', `${box.left + window.scrollX + (scaleX(px) - radius) * zoomX}`);
+      tooltip.setAttribute('y-position', `${box.top + window.scrollY + (scaleY(py) - radius) * zoomY}`);
       tooltip.setAttribute('font-size', fontSize);
       tooltip.setAttribute('visible', 'true');
     });
     canvas.addEventListener('mouseleave', hide);
+  }
+
+  /**
+   * Draws the chart onto a new canvas of the given size, for saving as an image.
+   * The chart is scaled to fit and centered, the same way an SVG with a viewBox would be,
+   * and drawn fresh at that size so it stays sharp.
+   * @param {number} width - Width of the image in pixels.
+   * @param {number} height - Height of the image in pixels.
+   * @returns {HTMLCanvasElement} - The canvas, ready for toBlob() or toDataURL().
+   */
+  toImageCanvas(width, height) {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    const scale = Math.min(width / this._width, height / this._height);
+    ctx.translate((width - this._width * scale) / 2, (height - this._height * scale) / 2);
+    ctx.scale(scale, scale);
+    this.drawChart(ctx, this.chartData(), this._layout, this._width, this._height, this.themeColor());
+    return canvas;
   }
 
   /** @returns {ChartData} - The chart's current title, labels and points. */
