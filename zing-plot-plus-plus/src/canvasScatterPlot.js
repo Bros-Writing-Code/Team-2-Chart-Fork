@@ -1,5 +1,5 @@
 import PlotBaseElement, { computeLayout, formatAxisNumber } from "./plotBase.js";
-import { drawPoints } from "./canvasPoints.js";
+import { drawPoints, findPointAt } from "./canvasPoints.js";
 
 const DEFAULT_COLOR = '#3498db';
 
@@ -75,11 +75,59 @@ class CanvasScatterPlotElement extends PlotBaseElement {
   }
 
   /**
-   * Hover tooltips are added in the next step. PlotBaseElement's version looks for SVG
-   * circles, which this chart doesn't have.
+   * Shows the page's <tool-tip-modal id="my-tooltip"> when the mouse is over a point.
+   * Replaces PlotBaseElement's version, which looks for SVG circles. A canvas has no
+   * circles to hover, so this finds the point under the mouse with findPointAt().
+   * Uses the same timing and tooltip attributes as the SVG chart.
    * @returns {void}
    */
-  setupHoverListeners() {}
+  setupHoverListeners() {
+    const canvas = this.shadowDOM.querySelector('canvas');
+    const tooltip = document.getElementById('my-tooltip');
+    if (!canvas || !tooltip) {
+      return;
+    }
+    const { sizes, margin, scaleX, scaleY } = this._layout;
+    const radius = pointDrawRadius(sizes);
+    const fontSize = `${(Math.min(this._width, this._height) * 0.02).toFixed(1)}px`;
+    let shown = null;
+
+    const hide = () => {
+      if (!shown) return;
+      shown = null;
+      canvas.style.cursor = '';
+      // Wait a moment, like the SVG chart, so the mouse can move onto the tooltip.
+      clearTimeout(window.__tooltipTimeout);
+      window.__tooltipTimeout = setTimeout(() => tooltip.setAttribute('visible', 'false'), 100);
+    };
+
+    canvas.addEventListener('mousemove', (e) => {
+      const box = canvas.getBoundingClientRect();
+      const x = e.clientX - box.left;
+      const y = e.clientY - box.top;
+      const inPlot = x >= margin.left && x <= margin.left + sizes.plotWidth
+        && y >= margin.top && y <= margin.top + sizes.plotHeight;
+      // Allow a couple of extra pixels so small points are easy to hit.
+      const point = inPlot ? findPointAt(this._points ?? [], scaleX, scaleY, x, y, radius + 2) : null;
+      if (!point) {
+        hide();
+        return;
+      }
+      if (point === shown) return;
+      shown = point;
+      canvas.style.cursor = 'pointer';
+      clearTimeout(window.__tooltipTimeout);
+      const [px, py] = point.coordinate;
+      // Same spot as the SVG chart: the top-left corner of the point's circle.
+      tooltip.setAttribute('x-coordinate', `${px}`);
+      tooltip.setAttribute('y-coordinate', `${py}`);
+      tooltip.setAttribute('x-position', `${box.left + window.scrollX + scaleX(px) - radius}`);
+      tooltip.setAttribute('y-position', `${box.top + window.scrollY + scaleY(py) - radius}`);
+      tooltip.setAttribute('font-size', fontSize);
+      tooltip.setAttribute('visible', 'true');
+    });
+    canvas.addEventListener('mouseleave', hide);
+  }
 
   /** @returns {ChartData} - The chart's current title, labels and points. */
   chartData() {
