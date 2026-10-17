@@ -53,8 +53,8 @@ Run them: `cd zing-plot-plus-plus && npm test` (CI runs this on every push).
 | `<scatter-plot>` / `<line-plot>` | None. They still render with SVG. |
 | Tooltip, PNG export, website | None |
 | npm package API | None. `drawPoints` isn't exported from `detailedPlots.js`. |
-| Open bug-fix work (#2, branch `fix/chart-base`) | No conflict. `plotBase.js` isn't touched. |
-| Existing tests | Unchanged: 16 pass, 3 known-bug TODOs (BUG-02/03/04) |
+| Chart-base bug fixes (BUG-02/03/04/16, merged to `main` in PR #9) | No conflict. Step 1 doesn't touch `plotBase.js`; `main` was merged into this branch cleanly. |
+| Existing tests | Unchanged and all passing. Library suite after merging `main`: 20 pass, 0 fail, 0 TODO (18 existing + 2 new) |
 
 ## Deliberately left out (planned for later pushes)
 

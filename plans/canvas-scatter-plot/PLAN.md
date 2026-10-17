@@ -122,6 +122,8 @@ How to read it:
 
 Re-run: `node plans/canvas-scatter-plot/bench/node-bench.mjs`
 
+Re-run on 2026‑10‑17 after merging `main` (PR #9, label escaping and the zero-range fix): same results within run-to-run noise. At 10,000 points: 11.2 ms SVG build, 1.29 MB markup, 44 ms for 1000 brute-force lookups.
+
 ### 4b. In-browser benchmark (to run)
 
 `bench/browser-bench.html` renders the same data three ways in a real browser and forces each renderer to finish before stopping the timer:
@@ -204,7 +206,7 @@ Paste the results here:
 3. **Theme color.** The SVG uses `var(--chart-color-theme, #3498db)`. Canvas can't read CSS variables directly, so use `getComputedStyle(this).getPropertyValue('--chart-color-theme').trim() || '#3498db'`, read once per render.
 4. **Stroke and opacity parity.** Today it's fill + stroke, same color, `opacity: 0.8`, stroke width `max(axisStroke/2, 0.5)`. Match this, or deliberately simplify and note it.
 5. **Clipping.** The canvas edge is the clip. Points partly outside are cut exactly like today's `clip-path`.
-6. **NaN and Infinity.** `arc()` with NaN silently draws nothing (SVG drew an invalid circle). Filter explicitly so behaviour is defined. BUG‑04 (zero range) stays a known bug, tracked separately.
+6. **NaN and Infinity.** `arc()` with NaN silently draws nothing (SVG drew an invalid circle). Filter explicitly so behaviour is defined. BUG‑04 (zero range → NaN) is fixed on `main` (PR #9 treats a zero range as 1), so this only covers bad input data.
 7. **Tooltip position.** Today it uses the circle's `getBoundingClientRect()`. Canvas mode uses `canvas.getBoundingClientRect()` + the point's pixel offset + scroll. Keep the same `window.__followRaf` / `__tooltipTimeout` handshake with `<tool-tip-modal>`.
 8. **Event listener leaks.** `renderGraph()` replaces `innerHTML` each time. In canvas mode, attach listeners once to a persistent canvas (or use an `AbortController`) so re-renders don't stack duplicate handlers.
 9. **PNG export (`zing-plot-web/script.js:338`).** It currently clones only the `<svg>`, so **canvas points would be missing from the PNG**. Fix: rasterize the SVG as today, then `drawImage(pointsCanvas, margin.left*scale, margin.top*scale, ...)` onto the same export canvas. Better still, add a library method `chart.toBlob()` so the site doesn't need to know the internals.
@@ -269,7 +271,7 @@ Uses a **recording fake context**: an object whose methods (`arc`, `fill`, `move
 - `plots.test.js` scatter tests keep running against `renderer="svg"` (still supported).
 - `line-plot` and chart-base tests: **must pass unchanged**.
 - `zing-plot-web` parsing/fixture tests: unaffected (parsing doesn't touch rendering).
-- BUG-02/03/04 `todo` tests stay as they are.
+- BUG-02/03/04 were fixed in PR #9, so their tests are now normal tests and must keep passing.
 
 ### 7.4 Manual browser checklist (`demo/demo.html` and the site)
 
