@@ -14,6 +14,7 @@ It lives in its own files, so **`<scatter-plot>`, `<line-plot>` and the website 
 ## Contents
 
 - [Where things are](#where-things-are)
+- [Demo](#demo)
 - [Using `<canvas-scatter-plot>`](#using-canvas-scatter-plot)
 - [Try it in a browser](#try-it-in-a-browser)
 - [How it works](#how-it-works)
@@ -34,11 +35,29 @@ It lives in its own files, so **`<scatter-plot>`, `<line-plot>` and the website 
 | `zing-plot-plus-plus/src/canvasPoints.js` | `drawPoints()`, which draws the circles |
 | `zing-plot-plus-plus/tests/canvasScatterPlot.test.js` | Tests for the element |
 | `zing-plot-plus-plus/tests/canvasPoints.test.js` | Tests for `drawPoints` |
+| `zing-plot-plus-plus/demo/canvas-vs-svg.html` | Live side-by-side demo with timings ([how to run](#demo)) |
+| `zing-plot-plus-plus/demo/canvas-features.js` | The demo's feature list: update it when the canvas chart gains a feature |
 | `plans/canvas-scatter-plot/README.md` | **This file**: the quick reference |
 | `plans/canvas-scatter-plot/PLAN.md` | The full plan: why Canvas, options compared, design, risks |
 | `plans/canvas-scatter-plot/step-1-draw-points.md` | What step 1 changed |
 | `plans/canvas-scatter-plot/step-2-canvas-scatter-element.md` | What step 2 changed |
 | `plans/canvas-scatter-plot/bench/` | Benchmarks comparing SVG, Canvas and WebGL |
+
+## Demo
+
+A page that draws the same points with `<scatter-plot>` (SVG) and `<canvas-scatter-plot>` side by side and measures both in your browser.
+
+1. From the repo root, start a local server: `npx serve .` (or `python3 -m http.server`).
+2. Open `/zing-plot-plus-plus/demo/canvas-vs-svg.html` on the address it prints, e.g. `http://localhost:3000/zing-plot-plus-plus/demo/canvas-vs-svg.html`.
+
+Opening the file by double-clicking won't work: browsers block the library imports for files opened directly from disk.
+
+What it shows:
+- **Both charts** with 1,000, 10,000 or 50,000 points.
+- **Measurements**: time until each chart is on screen, number of elements, markup size, and the average of 20 redraws (roughly what zooming costs).
+- **Canvas features**: a card per feature with its status (Done, In progress or Planned) and where it belongs. Done features can have a "try it" control, e.g. **Check positions** confirms every canvas point matches its SVG twin.
+
+**When you add a feature** (tooltips, zoom, export…), add or update its entry in `zing-plot-plus-plus/demo/canvas-features.js`. Set `status: 'done'` and, if useful, give it a `setup()` function that adds a button or control to its card. The comment at the top of that file explains each field. The page picks it up automatically.
 
 ## Using `<canvas-scatter-plot>`
 

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canvas vs SVG Scatter</title>
+<!--
+  Side-by-side demo of <scatter-plot> (SVG) and <canvas-scatter-plot> (canvas).
+  Run a local server from the repo root, e.g. `npx serve .`, then open
+  /zing-plot-plus-plus/demo/canvas-vs-svg.html. Opening the file directly won't work,
+  because browsers block module imports from file://.
+  Features shown at the bottom come from canvas-features.js.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f3f5f7;
+    --surface: #ffffff;
+    --ink: #17202a;
+    --muted: #5b6874;
+    --line: #d9dee3;
+    --svg: #8a5a00;
+    --svg-soft: #fbf1dc;
+    --canvas: #1f6fae;
+    --canvas-soft: #e3eff9;
+    --good: #1d7a46;
+    --good-soft: #e1f2e8;
+    --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-data: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #12171c; --surface: #1a2128; --ink: #e6eaee; --muted: #9aa6b2; --line: #2c353e;
+      --svg: #e0a94a; --svg-soft: #33291a; --canvas: #6cb4ec; --canvas-soft: #19293a;
+      --good: #5cc98b; --good-soft: #17301f;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    padding: 28px 16px 40px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 22px; }
+  h1 { font-size: 1.7rem; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 1rem; font-weight: 600; margin: 0; }
+  h3 { font-size: 0.95rem; font-weight: 600; margin: 0; }
+  p { margin: 0; max-width: 68ch; }
+  code { font-family: var(--font-data); font-size: 0.88em; }
+  .lede { color: var(--muted); }
+  header { display: grid; gap: 8px; }
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 16px; }
+  .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label { font-family: var(--font-data); font-size: 0.9rem; padding: 6px 12px; cursor: pointer; border-left: 1px solid var(--line); background: var(--surface); }
+  .seg label:first-of-type { border-left: 0; }
+  .seg input:checked + label { background: var(--ink); color: var(--surface); }
+  .seg input:focus-visible + label { outline: 2px solid var(--canvas); outline-offset: -2px; }
+  .group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  button { font: inherit; font-size: 0.9rem; font-weight: 500; padding: 7px 14px; border-radius: 6px; cursor: pointer; border: 1px solid var(--ink); background: var(--ink); color: var(--surface); }
+  button.secondary { background: transparent; color: var(--ink); }
+  button:disabled { opacity: 0.5; cursor: progress; }
+  button:focus-visible { outline: 2px solid var(--canvas); outline-offset: 2px; }
+  .status { font-size: 0.85rem; color: var(--muted); }
+
+  .verdict { font-size: 1.05rem; padding: 12px 16px; }
+  .verdict strong { color: var(--good); }
+
+  .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr)); gap: 18px; }
+  .panel { display: grid; gap: 14px; align-content: start; min-width: 0; }
+  .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .tag { font-family: var(--font-data); font-size: 0.85rem; padding: 2px 8px; border-radius: 4px; }
+  .svg .tag { background: var(--svg-soft); color: var(--svg); }
+  .canvas .tag { background: var(--canvas-soft); color: var(--canvas); }
+  dl.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 0; }
+  dl.stats div { display: grid; gap: 2px; }
+  dt { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  dd { margin: 0; font-family: var(--font-data); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+  .chart-scroll { overflow-x: auto; border-radius: 4px; background: #fff; line-height: 0; }
+  .hint { font-size: 0.85rem; color: var(--muted); }
+
+  .features-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .features { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+  .feature { display: grid; gap: 8px; align-content: start; padding: 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+  .feature-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .pill { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .pill.done { background: var(--good-soft); color: var(--good); }
+  .pill.in-progress { background: var(--canvas-soft); color: var(--canvas); }
+  .pill.planned { background: var(--surface); color: var(--muted); border: 1px solid var(--line); }
+  .feature-where { font-size: 0.8rem; color: var(--muted); }
+  .feature-desc { font-size: 0.9rem; }
+  .feature-try { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .feature-try:empty { display: none; }
+  .feature-result { font-family: var(--font-data); font-size: 0.85rem; }
+
+  .notes ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 80ch; }
+  .notes { display: grid; gap: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Canvas vs SVG Scatter</h1>
+    <p class="lede">The same random points drawn twice: on the left by <code>&lt;scatter-plot&gt;</code> (one SVG circle per point), on the right by <code>&lt;canvas-scatter-plot&gt;</code> (all points on one canvas). Both use the library code in <code>zing-plot-plus-plus/src</code>.</p>
+  </header>
+
+  <section class="box controls" aria-label="Demo controls">
+    <div class="group">
+      <span class="label" id="count-label">Points</span>
+      <div class="seg" role="radiogroup" aria-labelledby="count-label">
+        <input type="radio" name="count" id="count-1000" value="1000"><label for="count-1000">1,000</label>
+        <input type="radio" name="count" id="count-10000" value="10000" checked><label for="count-10000">10,000</label>
+        <input type="radio" name="count" id="count-50000" value="50000"><label for="count-50000">50,000</label>
+      </div>
+    </div>
+    <div class="group">
+      <button id="render-btn" type="button">Render both</button>
+      <button id="redraw-btn" type="button" class="secondary">Redraw 20× (like zooming)</button>
+    </div>
+    <span class="status" id="status" role="status">Measuring…</span>
+  </section>
+
+  <p class="box verdict" id="verdict">Rendering 10,000 points with both versions…</p>
+
+  <section class="panels">
+    <article class="box panel svg">
+      <div class="panel-head">
+        <h2>Current: SVG</h2>
+        <span class="tag">&lt;scatter-plot&gt;</span>
+      </div>
+      <dl class="stats">
+        <div><dt>Time to screen</dt><dd id="svg-total">–</dd></div>
+        <div><dt>Script + parse</dt><dd id="svg-sync">–</dd></div>
+        <div><dt>Elements in chart</dt><dd id="svg-nodes">–</dd></div>
+        <div><dt>Markup</dt><dd id="svg-markup">–</dd></div>
+        <div><dt>Redraw average</dt><dd id="svg-redraw">–</dd></div>
+      </dl>
+      <div class="chart-scroll"><scatter-plot id="svg-chart"></scatter-plot></div>
+      <p class="hint">Hover a point to see its tooltip.</p>
+    </article>
+
+    <article class="box panel canvas">
+      <div class="panel-head">
+        <h2>New: Canvas</h2>
+        <span class="tag">&lt;canvas-scatter-plot&gt;</span>
+      </div>
+      <dl class="stats">
+        <div><dt>Time to screen</dt><dd id="canvas-total">–</dd></div>
+        <div><dt>Script + parse</dt><dd id="canvas-sync">–</dd></div>
+        <div><dt>Elements in chart</dt><dd id="canvas-nodes">–</dd></div>
+        <div><dt>Markup</dt><dd id="canvas-markup">–</dd></div>
+        <div><dt>Redraw average</dt><dd id="canvas-redraw">–</dd></div>
+      </dl>
+      <div class="chart-scroll"><canvas-scatter-plot id="canvas-chart"></canvas-scatter-plot></div>
+      <p class="hint">See the feature list below for what the canvas version supports so far.</p>
+    </article>
+  </section>
+
+  <section class="box" aria-labelledby="features-title">
+    <div class="features-head">
+      <h2 id="features-title">Canvas features</h2>
+      <span class="status" id="features-summary"></span>
+    </div>
+    <p class="hint" style="margin: 6px 0 14px">This list comes from <code>demo/canvas-features.js</code>. Add or update an entry there when the canvas chart gains a feature.</p>
+    <ul class="features" id="features"></ul>
+  </section>
+
+  <section class="box notes">
+    <h2>How to read the numbers</h2>
+    <ul>
+      <li><strong>Time to screen</strong>: from calling <code>setChartProperties()</code> until the browser has painted the next frame. It includes waiting for that frame (up to about 16 ms on a 60 Hz screen), so small differences at 1,000 points are mostly noise.</li>
+      <li><strong>Script + parse</strong>: building the chart and the browser reading its markup, before painting.</li>
+      <li><strong>Elements in chart</strong>: everything inside the chart's shadow DOM. SVG adds one <code>&lt;circle&gt;</code> per point; the canvas version adds one <code>&lt;canvas&gt;</code> no matter how many points.</li>
+      <li><strong>Redraw average</strong>: re-renders the same chart 20 times, the way zooming or panning would.</li>
+      <li>Timings depend on your device and browser, and vary a little run to run. Click <em>Render both</em> to measure again.</li>
+    </ul>
+  </section>
+</div>
+
+<tool-tip-modal id="my-tooltip" visible="false"></tool-tip-modal>
+
+<script type="module">
+  import '../src/detailedPlots.js';
+  import '../src/canvasScatterPlot.js';
+  import { FEATURES } from './canvas-features.js';
+
+  const W = 500, H = 400;
+  const $ = (id) => document.getElementById(id);
+  const svgChart = $('svg-chart');
+  const canvasChart = $('canvas-chart');
+  const renderBtn = $('render-btn');
+  const redrawBtn = $('redraw-btn');
+  const statusEl = $('status');
+  const verdictEl = $('verdict');
+  let rendered = false;
+
+  // Same seeded random points every time, spread over 0..10 like the library tests.
+  function makePoints(n) {
+    let seed = 42;
+    const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    return Array.from({ length: n }, () => ({ coordinate: [random() * 10, random() * 10] }));
+  }
+
+  // Wait until the browser has painted the frame that includes our change.
+  const nextPaint = () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 60));
+
+  const fmtMs = (ms) => ms < 10 ? `${ms.toFixed(1)} ms` : `${Math.round(ms).toLocaleString()} ms`;
+  const fmtKB = (chars) => chars < 1024 * 1024
+    ? `${Math.max(1, Math.round(chars / 1024)).toLocaleString()} KB`
+    : `${(chars / 1024 / 1024).toFixed(1)} MB`;
+
+  async function measureRender(el, data) {
+    const start = performance.now();
+    el.setChartProperties(data, W, H, false, 0, 0, 10, 10, 5);
+    el.shadowRoot.querySelector('svg')?.getBoundingClientRect(); // force layout
+    const sync = performance.now() - start;
+    await nextPaint();
+    return {
+      sync,
+      total: performance.now() - start,
+      nodes: el.shadowRoot.querySelectorAll('*').length,
+      markup: el.shadowRoot.innerHTML.length,
+    };
+  }
+
+  async function measureRedraw(el, times = 20) {
+    let sum = 0;
+    for (let i = 0; i < times; i++) {
+      const start = performance.now();
+      el.renderGraph();
+      el.shadowRoot.querySelector('svg')?.getBoundingClientRect();
+      await nextPaint();
+      sum += performance.now() - start;
+    }
+    return sum / times;
+  }
+
+  function show(prefix, r) {
+    $(`${prefix}-total`).textContent = fmtMs(r.total);
+    $(`${prefix}-sync`).textContent = fmtMs(r.sync);
+    $(`${prefix}-nodes`).textContent = r.nodes.toLocaleString();
+    $(`${prefix}-markup`).textContent = fmtKB(r.markup);
+  }
+
+  function setBusy(busy, text) {
+    renderBtn.disabled = busy;
+    redrawBtn.disabled = busy;
+    statusEl.textContent = text;
+  }
+
+  async function renderBoth() {
+    const n = Number(document.querySelector('input[name="count"]:checked').value);
+    setBusy(true, `Rendering ${n.toLocaleString()} points…`);
+    verdictEl.textContent = `Rendering ${n.toLocaleString()} points with both versions…`;
+    $('svg-redraw').textContent = '–';
+    $('canvas-redraw').textContent = '–';
+    await settle();
+
+    const data = { title: `${n.toLocaleString()} random points`, 'x-axis-label': 'X', 'y-axis-label': 'Y', points: makePoints(n) };
+    const svg = await measureRender(svgChart, data);
+    show('svg', svg);
+    await settle();
+    const canvas = await measureRender(canvasChart, data);
+    show('canvas', canvas);
+    rendered = true;
+
+    const speed = svg.total / canvas.total;
+    const faster = speed >= 1.15
+      ? `<strong>Canvas reached the screen ${speed.toFixed(1)}× faster</strong>`
+      : 'Both reached the screen in about the same time';
+    verdictEl.innerHTML = `${faster} with ${n.toLocaleString()} points, using ${canvas.nodes.toLocaleString()} chart elements instead of ${svg.nodes.toLocaleString()} and ${fmtKB(canvas.markup)} of markup instead of ${fmtKB(svg.markup)}.`;
+    setBusy(false, `Measured ${n.toLocaleString()} points.`);
+  }
+
+  async function redrawBoth() {
+    if (!rendered) return;
+    setBusy(true, 'Redrawing each chart 20 times…');
+    await settle();
+    const svgAvg = await measureRedraw(svgChart);
+    $('svg-redraw').textContent = fmtMs(svgAvg);
+    await settle();
+    const canvasAvg = await measureRedraw(canvasChart);
+    $('canvas-redraw').textContent = fmtMs(canvasAvg);
+    const speed = svgAvg / canvasAvg;
+    setBusy(false, speed >= 1.15 ? `Redraws: canvas ${speed.toFixed(1)}× faster on average.` : 'Redraws: about the same speed.');
+  }
+
+  // One card per entry in canvas-features.js. Features with setup() get "try it" controls.
+  function renderFeatures() {
+    const list = $('features');
+    const labels = { done: 'Done', 'in-progress': 'In progress', planned: 'Planned' };
+    for (const feature of FEATURES) {
+      const card = document.createElement('li');
+      card.className = 'feature';
+      const top = document.createElement('div');
+      top.className = 'feature-top';
+      const name = document.createElement('h3');
+      name.textContent = feature.name;
+      const pill = document.createElement('span');
+      pill.className = `pill ${feature.status}`;
+      pill.textContent = labels[feature.status] ?? feature.status;
+      top.append(name, pill);
+      const where = document.createElement('span');
+      where.className = 'feature-where';
+      where.textContent = feature.where;
+      const desc = document.createElement('p');
+      desc.className = 'feature-desc';
+      desc.textContent = feature.description;
+      const area = document.createElement('div');
+      area.className = 'feature-try';
+      card.append(top, where, desc, area);
+      list.append(card);
+      feature.setup?.(area, { svgChart, canvasChart });
+    }
+    const done = FEATURES.filter((f) => f.status === 'done').length;
+    $('features-summary').textContent = `${done} of ${FEATURES.length} done`;
+  }
+
+  renderBtn.addEventListener('click', renderBoth);
+  redrawBtn.addEventListener('click', redrawBoth);
+  document.querySelectorAll('input[name="count"]').forEach((input) => input.addEventListener('change', renderBoth));
+
+  renderBoth().then(() => {
+    renderFeatures();
+    return redrawBoth();
+  });
+</script>
+</body>
+</html>
