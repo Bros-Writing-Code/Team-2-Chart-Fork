@@ -1,6 +1,6 @@
 # Plan: Scatter Plot Rendering, SVG → Canvas
 
-> Status: **In progress, step 1 of 6.**
+> Status: **In progress, step 2 of 6.**
 > Scope: `<scatter-plot>` in `zing-plot-plus-plus`. `<line-plot>` stays on SVG for now.
 
 ## Progress
@@ -10,13 +10,15 @@ The plan is delivered in very small pushes. Each one has its own short write-up.
 | Step | What | Status | Details |
 |---|---|---|---|
 | 1 | `drawPoints()` helper + 2 tests (not used by the chart yet) | ✅ Done | [step-1-draw-points.md](step-1-draw-points.md) |
-| 2 | `renderer="canvas"` option on `<scatter-plot>` (off by default) | Next | — |
-| 3 | Color/opacity, one path for all points, same-pixel and batching tests | Planned | — |
+| 2 | Standalone `<canvas-scatter-plot>` element (`<scatter-plot>` unchanged) | ✅ Done | [step-2-canvas-scatter-element.md](step-2-canvas-scatter-element.md) |
+| 3 | Theme color/opacity, one path for all points, batching test | Next | — |
 | 4 | Hover lookup + tooltip on canvas | Planned | — |
 | 5 | PNG export includes canvas points | Planned | — |
 | 6 | HiDPI, screen-reader label, switch the website to canvas | Planned | — |
 
 These replace the coarser steps in [§6](#6-implementation-steps). Tests listed in [§7](#7-test-plan) are added in the step that needs them.
+
+> **Change from the original design (step 2).** Instead of a `renderer="canvas"` attribute on `<scatter-plot>` (§5.1), the canvas version is a **separate element, `<canvas-scatter-plot>`**, in its own file. It inherits the SVG frame from `PlotBaseElement`, so no existing file is edited and teammates can merge it without conflicts. Folding it into `<scatter-plot>` (as a `renderer` option or a replacement) is a later team decision; the rest of this plan still applies either way.
 
 ---
 
@@ -332,5 +334,6 @@ Uses a **recording fake context**: an object whose methods (`arc`, `fill`, `move
 | `README.md` | Quick reference for the canvas scatter plot (start here) |
 | `PLAN.md` | This plan |
 | `step-1-draw-points.md` | What step 1 changed, its tests, and what was left for later |
+| `step-2-canvas-scatter-element.md` | What step 2 changed: the standalone `<canvas-scatter-plot>` element |
 | `bench/node-bench.mjs` | Measures the real library's SVG build cost + canvas hit-test cost (Node, no deps) |
 | `bench/browser-bench.html` | SVG vs Canvas 2D vs WebGL render + hover timing in a real browser |
