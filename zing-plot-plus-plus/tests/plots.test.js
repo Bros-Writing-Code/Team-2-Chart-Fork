@@ -159,3 +159,162 @@ describe('tool-tip-modal formatValue', () => {
     assert.equal(format('0.0001'), '1.00e-4');
   });
 });
+
+
+describe('chart viewport (zooming and panning)', () => {
+  /**
+   * Creates a chart with initialized viewport properties.
+   * Stubs rendering so viewport calculations can be tested independently.
+   */
+  function viewport(opts = {}) {
+    const o = { ...DEFAULTS, ...opts };
+    const plot = instanceOf('scatter-plot');
+
+    plot._width = o.width;
+    plot._height = o.height;
+    plot._center_origin = o.center;
+    plot._anchorX = o.anchorX;
+    plot._anchorY = o.anchorY;
+    plot._rangeX = o.rangeX;
+    plot._rangeY = o.rangeY;
+    plot._ticks = o.ticks;
+    plot._points = [];
+
+    plot.renderGraph = () => {};
+
+    return plot;
+  }
+
+  test('gets viewport bounds with a bottom-left anchor', () => {
+    const plot = viewport({
+      anchorX: 5,
+      anchorY: 10,
+      rangeX: 20,
+      rangeY: 30,
+    });
+
+    assert.deepEqual(plot.getViewport(), {
+      minX: 5,
+      maxX: 25,
+      minY: 10,
+      maxY: 40,
+    });
+  });
+
+  test('gets viewport bounds with a centered origin', () => {
+    const plot = viewport({
+      center: true,
+      anchorX: 5,
+      anchorY: 10,
+      rangeX: 20,
+      rangeY: 30,
+    });
+
+    assert.deepEqual(plot.getViewport(), {
+      minX: -5,
+      maxX: 15,
+      minY: -5,
+      maxY: 25,
+    });
+  });
+
+  test('sets viewport bounds with a bottom-left anchor', () => {
+    const plot = viewport();
+
+    plot.setViewport(2, 12, 4, 24);
+
+    assert.equal(plot._anchorX, 2);
+    assert.equal(plot._anchorY, 4);
+    assert.equal(plot._rangeX, 10);
+    assert.equal(plot._rangeY, 20);
+
+    assert.deepEqual(plot.getViewport(), {
+      minX: 2,
+      maxX: 12,
+      minY: 4,
+      maxY: 24,
+    });
+  });
+
+  test('sets viewport bounds with a centered origin', () => {
+    const plot = viewport({ center: true });
+
+    plot.setViewport(2, 12, 4, 24);
+
+    assert.equal(plot._anchorX, 7);
+    assert.equal(plot._anchorY, 14);
+    assert.equal(plot._rangeX, 10);
+    assert.equal(plot._rangeY, 20);
+
+    assert.deepEqual(plot.getViewport(), {
+      minX: 2,
+      maxX: 12,
+      minY: 4,
+      maxY: 24,
+    });
+  });
+
+  test('preserves viewport ranges when panning', () => {
+    const plot = viewport();
+
+    const before = plot.getViewport();
+
+    const dx = 3;
+    const dy = -2;
+
+    plot.setViewport(
+      before.minX + dx,
+      before.maxX + dx,
+      before.minY + dy,
+      before.maxY + dy,
+    );
+
+    assert.equal(plot._rangeX, 10);
+    assert.equal(plot._rangeY, 10);
+
+    assert.deepEqual(plot.getViewport(), {
+      minX: 3,
+      maxX: 13,
+      minY: -2,
+      maxY: 8,
+    });
+  });
+
+  test('preserves the relative axis ranges when zooming', () => {
+    const plot = viewport({
+      rangeX: 20,
+      rangeY: 10,
+    });
+
+    const oldRangeX = plot._rangeX;
+    const oldRangeY = plot._rangeY;
+
+    const zoomFactor = 0.5;
+    const bounds = plot.getViewport();
+
+    plot.setViewport(
+      bounds.minX,
+      bounds.minX + oldRangeX * zoomFactor,
+      bounds.minY,
+      bounds.minY + oldRangeY * zoomFactor,
+    );
+
+    assert.equal(plot._rangeX / oldRangeX, zoomFactor);
+    assert.equal(plot._rangeY / oldRangeY, zoomFactor);
+    assert.equal(plot._rangeX / plot._rangeY, 2);
+  });
+
+  test('does not render invalid viewport dimensions', () => {
+    const plot = viewport();
+
+    let renders = 0;
+    plot.renderGraph = () => {
+      renders++;
+    };
+
+    plot.setViewport(0, 10, 0, 20);
+
+    assert.equal(renders, 1);
+  });
+});
+
