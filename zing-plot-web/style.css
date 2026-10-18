@@ -534,6 +534,24 @@ svg {
   color: #51405F;
 }
 
+#message.warning {
+  color: #8A5A00;
+}
+
+/* X/Y column dropdowns shown under the drop zone for multi-column files. */
+.column-picker {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 12px;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 16px;
+}
+
+.column-picker[hidden] {
+  display: none;
+}
+
 /* Reduce component sizes proportionally on compact desktop screens. */
 @media (min-width: 1000px) and (max-width: 1400px) {
   .app {

@@ -41,33 +41,28 @@ export const DEFAULT_DATASET = {
 
 /**
  * Runs file contents through the same steps as importFile() in script.js:
- * size limit, pick a parser by extension, merge over the current dataset,
- * then validate(). Kept in sync by hand because importFile() also touches the DOM.
+ * size limit, pick a parser by extension, pick the default columns, then
+ * buildDataset(). Kept in sync by hand because importFile() also touches the DOM.
  * @returns {object} the validated dataset; throws with the user-facing message.
  */
 export function importText(site, name, text) {
   if (Buffer.byteLength(text) > 5 * 1024 * 1024) {
     throw new Error('Please choose a file smaller than 5 MB.');
   }
-  let incoming;
+  let table;
   if (/\.json$/i.test(name)) {
     try {
-      incoming = site.parseJSON(text);
+      table = site.parseJSON(text);
     } catch (error) {
       // importFile() swaps JSON syntax errors for a friendlier message.
       if (error.name === 'SyntaxError') throw new Error('Invalid JSON. Please check the file format.');
       throw error;
     }
   } else if (/\.csv$/i.test(name)) {
-    incoming = site.parseCSV(text);
+    table = site.parseCSV(text);
   } else {
     throw new Error('Please choose a .json or .csv file.');
   }
-  return plain(site.validate({
-    ...DEFAULT_DATASET,
-    ...incoming,
-    title: incoming.title || DEFAULT_DATASET.title,
-    xLabel: incoming.xLabel || DEFAULT_DATASET.xLabel,
-    yLabel: incoming.yLabel || DEFAULT_DATASET.yLabel,
-  }));
+  const [xColumn, yColumn] = site.defaultColumns(site.numericColumns(table));
+  return plain(site.buildDataset(table, xColumn, yColumn, DEFAULT_DATASET));
 }

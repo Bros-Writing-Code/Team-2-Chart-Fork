@@ -2,7 +2,7 @@
 // File-import cases live in fixtures.test.mjs. Bug IDs match qa/TEST_PLAN.md.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadSiteScript, plain } from './helpers/load-script.mjs';
+import { loadSiteScript, plain, importText } from './helpers/load-script.mjs';
 
 const site = loadSiteScript();
 const numbers = (text) => plain(site.numbers(text));
@@ -25,22 +25,18 @@ describe('numbers() - manual X/Y entry', () => {
     assert.throws(() => site.numbers('NaN'), /valid numbers/);
   });
 
-  test('a trailing comma does not add a phantom 0', {
-    todo: 'BUG-10: "1, 2, 3," becomes [1, 2, 3, 0]',
-  }, () => {
+  test('a trailing comma does not add a phantom 0 (BUG-10)', () => {
     assert.deepEqual(numbers('1, 2, 3,'), [1, 2, 3]);
   });
 
-  test('a leading comma is ignored', {
-    todo: 'BUG-13: ",1,2" is rejected with "Please enter X and Y values."',
-  }, () => {
+  test('a leading comma is ignored (BUG-13)', () => {
     assert.deepEqual(numbers(',1,2'), [1, 2]);
   });
 
-  test('hex and binary literals are rejected', {
-    todo: 'BUG-07: "0x1F" is silently read as 31',
-  }, () => {
-    assert.throws(() => site.numbers('0x1F'), /valid numbers/);
+  test('hex, binary and octal literals are rejected (BUG-07)', () => {
+    for (const bad of ['0x1F', '0b11', '0o17']) {
+      assert.throws(() => site.numbers(bad), /valid numbers/, bad);
+    }
   });
 });
 
@@ -63,10 +59,18 @@ describe('validate()', () => {
     }
   });
 
-  test('rejects negative values in X or Y with a clear notice (not supported)', () => {
-    const notice = /Negative values are not supported/;
-    assert.throws(() => site.validate({ ...base, x: [-1, 2], y: [1, 2] }), notice);
-    assert.throws(() => site.validate({ ...base, x: [1, 2], y: [1, '-0.5'] }), notice);
+  test('accepts negative values', () => {
+    assert.deepEqual(plain(site.validate({ ...base, x: [-1, 2], y: [1, '-0.5'] })).y, [1, -0.5]);
+  });
+
+  test('rejects nested arrays and objects instead of unwrapping them', () => {
+    for (const bad of [[5], { v: 5 }]) {
+      assert.throws(() => site.validate({ ...base, x: [1], y: [bad] }), /must be numbers/);
+    }
+  });
+
+  test('rejects values beyond ±1e300 (BUG-12)', () => {
+    assert.throws(() => site.validate({ ...base, x: [1], y: [-1.7e308] }), /too large/);
   });
 
   test('allows zero', () => {
@@ -83,6 +87,50 @@ describe('validate()', () => {
     const input = { ...base, x: ['1'], y: ['2'] };
     site.validate(input);
     assert.deepEqual(input.x, ['1']);
+  });
+});
+
+describe('column selection', () => {
+  test('picks columns named x and y in any order', () => {
+    const data = importText(site, 'a.csv', 'z,Y,X\n1,2,3\n4,5,6');
+    assert.deepEqual([data.x, data.y], [[3, 6], [2, 5]]);
+  });
+
+  test('otherwise uses the first two numeric columns, skipping text columns', () => {
+    const csv = 'name,time,temp,humidity\nA,1,20,50\nB,2,21,55';
+    const columns = site.numericColumns(site.parseCSV(csv));
+    assert.deepEqual(plain(columns.map((c) => c.name)), ['time', 'temp', 'humidity']);
+    const data = importText(site, 'a.csv', csv);
+    assert.deepEqual([data.xLabel, data.yLabel, data.x], ['time', 'temp', [1, 2]]);
+  });
+
+  test('reads JSON arrays of objects and objects of arrays by key', () => {
+    const rows = importText(site, 'a.json', '[{"t":1,"a":5,"b":9},{"t":2,"a":6,"b":8}]');
+    assert.deepEqual([rows.xLabel, rows.y], ['t', [5, 6]]);
+    const cols = importText(site, 'a.json', '{"time":[1,2],"temp":[3,4]}');
+    assert.deepEqual([cols.yLabel, cols.y], ['temp', [3, 4]]);
+  });
+});
+
+describe('JSON import cleanup', () => {
+  test('a malformed point is reported by position (BUG-06)', () => {
+    assert.throws(() => importText(site, 'a.json', '[[1,2],[3]]'), /Point 2 is invalid/);
+    assert.throws(() => importText(site, 'a.json', '{"points":[[1,2],null]}'), /Point 2 is invalid/);
+  });
+
+  test('unknown keys are not copied into the dataset', () => {
+    const data = importText(site, 'a.json', '{"x":[1],"y":[2],"evil":"<b>","nested":{"a":1}}');
+    assert.deepEqual(Object.keys(data).sort(), ['shortened', 'title', 'x', 'xLabel', 'y', 'yLabel']);
+  });
+
+  test('titles and labels become text and are cut to the form limits (BUG-08, BUG-09)', () => {
+    const data = importText(site, 'a.json', JSON.stringify({
+      title: 12345, xLabel: 'x'.repeat(200), yLabel: { bad: true }, x: [1], y: [2],
+    }));
+    assert.equal(data.title, '12345');
+    assert.equal(data.xLabel.length, 60);
+    assert.equal(data.yLabel, 'Sales (Units)'); // not text: keep the current label
+    assert.equal(data.shortened, true);
   });
 });
 
