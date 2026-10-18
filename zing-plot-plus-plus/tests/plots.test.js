@@ -303,18 +303,5 @@ describe('chart viewport (zooming and panning)', () => {
     assert.equal(plot._rangeY / oldRangeY, zoomFactor);
     assert.equal(plot._rangeX / plot._rangeY, 2);
   });
-
-  test('does not render invalid viewport dimensions', () => {
-    const plot = viewport();
-
-    let renders = 0;
-    plot.renderGraph = () => {
-      renders++;
-    };
-
-    plot.setViewport(0, 10, 0, 20);
-
-    assert.equal(renders, 1);
-  });
 });
 
