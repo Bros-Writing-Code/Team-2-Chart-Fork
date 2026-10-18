@@ -187,8 +187,228 @@ class PlotBaseElement extends HTMLElement {
     this.renderGraph();
   }
 
+  
+  /**
+   * Gets the current visible coordinate boundaries of the graph.
+   * @returns {object} - The minimum and maximum X and Y values.
+   */
+  getViewport() {
+    const minX = this._center_origin
+      ? this._anchorX - (this._rangeX / 2)
+      : this._anchorX;
+
+    const minY = this._center_origin
+      ? this._anchorY - (this._rangeY / 2)
+      : this._anchorY;
+
+    return {
+      minX: minX,
+      maxX: minX + this._rangeX,
+      minY: minY,
+      maxY: minY + this._rangeY
+    };
+  }
+
+  /**
+   * Updates the visible coordinate boundaries of the graph.
+   * @param {number} minX - Minimum visible X value.
+   * @param {number} maxX - Maximum visible X value.
+   * @param {number} minY - Minimum visible Y value.
+   * @param {number} maxY - Maximum visible Y value.
+   * @returns {void}
+   */
+  setViewport(minX, maxX, minY, maxY) {
+    this._rangeX = maxX - minX;
+    this._rangeY = maxY - minY;
+
+    this._anchorX = this._center_origin
+      ? (minX + maxX) / 2
+      : minX;
+
+    this._anchorY = this._center_origin
+      ? (minY + maxY) / 2
+      : minY;
+
+    this.renderGraph();
+  }
+
+  /**
+   * Converts a mouse position to normalized graph coordinates.
+   * Works with both SVG and Canvas rendering.
+   * The bottom-left corner is (0, 0) and the top-right is (1, 1).
+   * @param {PointerEvent|WheelEvent} event - The mouse event.
+   * @returns {object|null} - The normalized X and Y coordinates.
+   */
+  getMousePosition(event) {
+    const surface = this.shadowDOM.querySelector('canvas, svg');
+
+    if (!surface) {
+      return null;
+    }
+
+    const rect = surface.getBoundingClientRect();
+
+    if (!rect.width || !rect.height) {
+      return null;
+    }
+
+    const x = (event.clientX - rect.left) *
+      this._width / rect.width;
+
+    const y = (event.clientY - rect.top) *
+      this._height / rect.height;
+
+    const minDim = Math.min(this._width, this._height);
+
+    const margin = {
+      top: minDim * 0.08,
+      right: minDim * 0.05,
+      bottom: minDim * 0.12,
+      left: minDim * 0.20
+    };
+
+    const plotWidth = this._width - margin.left - margin.right;
+    const plotHeight = this._height - margin.top - margin.bottom;
+
+    if (plotWidth <= 0 || plotHeight <= 0) {
+      return null;
+    }
+
+    return {
+      x: (x - margin.left) / plotWidth,
+      y: 1 - ((y - margin.top) / plotHeight)
+    };
+  }
+
+
+  
+  /**
+   * Sets up renderer-independent zooming and panning.
+   * Event listeners are attached to the chart element so they
+   * continue working when SVG or Canvas content is redrawn.
+   * @returns {void}
+   */
+  setupViewportListeners() {
+    if (this._viewportListenersAttached) {
+      return;
+    }
+
+    this._viewportListenersAttached = true;
+
+    this.style.cursor = 'grab';
+    this.style.touchAction = 'none';
+    this.style.userSelect = 'none';
+
+    // Zoom uniformly around the mouse position.
+    this.addEventListener('wheel', (event) => {
+      const mouse = this.getMousePosition(event);
+
+      if (!mouse || mouse.x < 0 || mouse.x > 1 ||
+          mouse.y < 0 || mouse.y > 1) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const bounds = this.getViewport();
+      const zoomFactor = Math.exp(event.deltaY * 0.001);
+
+      // Both axes use exactly the same zoom factor.
+      const newRangeX = this._rangeX * zoomFactor;
+      const newRangeY = this._rangeY * zoomFactor;
+
+      if (newRangeX < 1e-9 || newRangeY < 1e-9 ||
+          newRangeX > 1e12 || newRangeY > 1e12) {
+        return;
+      }
+
+      const cursorX = bounds.minX + mouse.x * this._rangeX;
+      const cursorY = bounds.minY + mouse.y * this._rangeY;
+
+      this.setViewport(
+        cursorX - mouse.x * newRangeX,
+        cursorX + (1 - mouse.x) * newRangeX,
+        cursorY - mouse.y * newRangeY,
+        cursorY + (1 - mouse.y) * newRangeY
+      );
+    }, { passive: false });
+
+    // Begin dragging the graph.
+    this.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) {
+        return;
+      }
+
+      const mouse = this.getMousePosition(event);
+
+      if (!mouse || mouse.x < 0 || mouse.x > 1 ||
+          mouse.y < 0 || mouse.y > 1) {
+        return;
+      }
+
+      const tooltip = document.getElementById('my-tooltip');
+
+      if (tooltip) {
+        tooltip.setAttribute('visible', 'false');
+      }
+
+      clearTimeout(window.__tooltipTimeout);
+      cancelAnimationFrame(window.__followRaf);
+
+      this._drag = {
+        x: mouse.x,
+        y: mouse.y
+      };
+
+      this.setPointerCapture(event.pointerId);
+      this.style.cursor = 'grabbing';
+      event.preventDefault();
+    });
+
+    // Shift the viewport while dragging.
+    this.addEventListener('pointermove', (event) => {
+      if (!this._drag) {
+        return;
+      }
+
+      const mouse = this.getMousePosition(event);
+
+      if (!mouse) {
+        return;
+      }
+
+      const bounds = this.getViewport();
+
+      const dx = (mouse.x - this._drag.x) * this._rangeX;
+      const dy = (mouse.y - this._drag.y) * this._rangeY;
+
+      this.setViewport(
+        bounds.minX - dx,
+        bounds.maxX - dx,
+        bounds.minY - dy,
+        bounds.maxY - dy
+      );
+
+      // Update the drag origin so zooming during a pan is preserved.
+      this._drag.x = mouse.x;
+      this._drag.y = mouse.y;
+    });
+
+    // Stop dragging when the mouse is released.
+    const stopDrag = () => {
+      this._drag = null;
+      this.style.cursor = 'grab';
+    };
+
+    this.addEventListener('pointerup', stopDrag);
+    this.addEventListener('pointercancel', stopDrag);
+    this.addEventListener('lostpointercapture', stopDrag);
+  }
+
+
   connectedCallback() {
     // This method is called when the element is added to the DOM
+    this.setupViewportListeners();
   }
 
   disconnectedCallback() {
@@ -409,23 +629,57 @@ class PlotBaseElement extends HTMLElement {
     }
   }
 
+  
   /**
-   * Renders the graph and places it in the shadow (virtual DOM).
+   * Renders the graph and places it in the shadow DOM.
    * @returns {void}
    */
   renderGraph() {
+    // Avoid rendering before chart properties are initialized.
+    if (
+      !Number.isFinite(this._width) ||
+      !Number.isFinite(this._height) ||
+      !Number.isFinite(this._rangeX) ||
+      !Number.isFinite(this._rangeY) ||
+      !Number.isFinite(this._anchorX) ||
+      !Number.isFinite(this._anchorY) ||
+      !Number.isFinite(this._ticks) ||
+      this._width <= 0 ||
+      this._height <= 0 ||
+      this._ticks <= 0 ||
+      this._rangeX < 0 ||
+      this._rangeY < 0 ||
+      !Array.isArray(this._points)
+    ) {
+      return;
+    }
+
     try {
+      // Stop any active tooltip animation before redrawing.
+      clearTimeout(window.__tooltipTimeout);
+      cancelAnimationFrame(window.__followRaf);
+
+      const tooltip = document.getElementById('my-tooltip');
+
+      if (tooltip) {
+        tooltip.setAttribute('visible', 'false');
+      }
+
       this.shadowDOM.innerHTML = this.generateGraph({
         points: this._points,
-        "x-axis-label": this._xAxisLabel,
-        "y-axis-label": this._yAxisLabel,
-        "title": this._title
-      }, this._width, this._height, this._center_origin, this._anchorX, this._anchorY, this._rangeX, this._rangeY, this._ticks);
+        'x-axis-label': this._xAxisLabel,
+        'y-axis-label': this._yAxisLabel,
+        'title': this._title
+      }, this._width, this._height, this._center_origin,
+         this._anchorX, this._anchorY, this._rangeX,
+         this._rangeY, this._ticks);
+
       this.setupHoverListeners();
     } catch (error) {
       console.error('Error rendering graph:', error);
     }
   }
+
 
   /**
    * Sets up the hover listeners for the graph when the mouse enters a data point.
