@@ -364,7 +364,12 @@ async function importFile(file) {
     const [xColumn, yColumn] = defaultColumns(columns);
     applyColumns(table, xColumn, yColumn);
     // Let the user pick other columns when the file has more than two.
-    imported = { table, columns };
+    // applied: the column indices on screen, restored if a new pick fails.
+    imported = {
+      table,
+      columns,
+      applied: [columns.indexOf(xColumn), columns.indexOf(yColumn)],
+    };
     $("column-picker").hidden = columns.length < 3;
     for (const [id, chosen] of [["x-column", xColumn], ["y-column", yColumn]]) {
       $(id).replaceChildren(...columns.map((column, i) =>
@@ -404,8 +409,11 @@ function handleColumnChange() {
       columns[$("x-column").value],
       columns[$("y-column").value]
     );
-    notify("");
+    imported.applied = [$("x-column").value, $("y-column").value];
+    notify(dataset.shortened ? "Long title/labels were shortened." : "", "warning");
   } catch (error) {
+    // Keep the dropdowns in sync with the chart, which still shows the old columns.
+    [$("x-column").value, $("y-column").value] = imported.applied;
     notify(error.message, true);
   }
 }

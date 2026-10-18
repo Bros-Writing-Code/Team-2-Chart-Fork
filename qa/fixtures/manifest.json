@@ -46,6 +46,8 @@
     { "file": "title-100k-chars.json", "expect": "ok", "maxTitleLength": 100, "why": "Imported title should obey the same 100-char limit as the form" },
     { "file": "truncated.json", "expect": "error", "error": "Invalid JSON", "why": "Cut-off file" },
     { "file": "bare-number.json", "expect": "error", "error": "JSON needs", "why": "Valid JSON but not chart data" },
+    { "file": "weather-4-columns.csv", "expect": "ok", "n": 20, "xLabel": "time", "yLabel": "temperature", "why": "4 numeric columns plus a text column: picker offered, text column skipped, first two numeric columns plotted" },
+    { "file": "weather-4-columns.json", "expect": "ok", "n": 20, "title": "Weather Readings", "xLabel": "time", "yLabel": "temperature", "why": "Array of objects with 4 keys: picker offered, first two keys plotted" },
     { "file": "wrong-extension.txt", "expect": "error", "error": ".json or .csv", "why": "Unsupported file type" }
   ]
 }
