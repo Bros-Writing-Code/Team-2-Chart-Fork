@@ -1,17 +1,17 @@
 {
-  "name": "bros-zing-plot-plus-plus",
-  "version": "1.0.11",
+  "name": "zing-plot-plus-plus",
+  "version": "1.0.10",
   "description": "Scatter and line plots",
-  "homepage": "https://github.com/Bros-Writing-Code/Team-2-Chart-Fork#readme",
+  "homepage": "https://github.com/CSE-210-F26-02/Chart-Project#readme",
   "bugs": {
-    "url": "https://github.com/Bros-Writing-Code/Team-2-Chart-Fork/issues"
+    "url": "https://github.com/CSE-210-F26-02/Chart-Project/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Bros-Writing-Code/Team-2-Chart-Fork.git"
+    "url": "git+https://github.com/CSE-210-F26-02/Chart-Project.git"
   },
   "license": "ISC",
-  "author": "CSE210-Team-1 (fork of CSE210-Team-2)",
+  "author": "CSE210-Team-2",
   "type": "module",
   "main": "src/detailedPlots.js",
   "scripts": {

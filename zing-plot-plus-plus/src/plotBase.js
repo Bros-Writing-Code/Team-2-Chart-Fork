@@ -300,13 +300,271 @@ class PlotBaseElement extends HTMLElement {
     this._anchorX = anchorX;
     this._anchorY = anchorY;
     this._rangeX = rangeX;
-    this._rangeY = rangeY;
-    this._ticks = ticks;
+  this._rangeY = rangeY;
+  this._ticks = ticks;
+
+  // Save the initial viewport for the reset button.
+  this._initialViewport = {
+    centerOrigin,
+    anchorX,
+    anchorY,
+    rangeX,
+    rangeY
+  };
+
+  this.renderGraph();
+  }
+      
+
+  /**
+   * Restores the chart to its original viewport.
+   * @returns {void}
+   */
+  resetViewport() {
+    if (!this._initialViewport) {
+      return;
+    }
+
+    const initial = this._initialViewport;
+
+    this._center_origin = initial.centerOrigin;
+    this._anchorX = initial.anchorX;
+    this._anchorY = initial.anchorY;
+    this._rangeX = initial.rangeX;
+    this._rangeY = initial.rangeY;
+
+    this._drag = null;
+    this.style.cursor = 'grab';
+
     this.renderGraph();
   }
 
+  
+  /**
+   * Gets the current visible coordinate boundaries of the graph.
+   * @returns {object} - The minimum and maximum X and Y values.
+   */
+  getViewport() {
+    const minX = this._center_origin
+      ? this._anchorX - (this._rangeX / 2)
+      : this._anchorX;
+
+    const minY = this._center_origin
+      ? this._anchorY - (this._rangeY / 2)
+      : this._anchorY;
+
+    return {
+      minX: minX,
+      maxX: minX + this._rangeX,
+      minY: minY,
+      maxY: minY + this._rangeY
+    };
+  }
+
+  /**
+   * Updates the visible coordinate boundaries of the graph.
+   * @param {number} minX - Minimum visible X value.
+   * @param {number} maxX - Maximum visible X value.
+   * @param {number} minY - Minimum visible Y value.
+   * @param {number} maxY - Maximum visible Y value.
+   * @returns {void}
+   */
+  setViewport(minX, maxX, minY, maxY) {
+    this._rangeX = maxX - minX;
+    this._rangeY = maxY - minY;
+
+    this._anchorX = this._center_origin
+      ? (minX + maxX) / 2
+      : minX;
+
+    this._anchorY = this._center_origin
+      ? (minY + maxY) / 2
+      : minY;
+
+    this.renderGraph();
+  }
+
+  /**
+   * Converts a mouse position to normalized graph coordinates.
+   * Works with both SVG and Canvas rendering.
+   * The bottom-left corner is (0, 0) and the top-right is (1, 1).
+   * @param {PointerEvent|WheelEvent} event - The mouse event.
+   * @returns {object|null} - The normalized X and Y coordinates.
+   */
+  getMousePosition(event) {
+    const surface = this.shadowDOM.querySelector('canvas, svg');
+
+    if (!surface) {
+      return null;
+    }
+
+    const rect = surface.getBoundingClientRect();
+
+    if (!rect.width || !rect.height) {
+      return null;
+    }
+
+    const x = (event.clientX - rect.left) *
+      this._width / rect.width;
+
+    const y = (event.clientY - rect.top) *
+      this._height / rect.height;
+
+    const minDim = Math.min(this._width, this._height);
+
+    const margin = {
+      top: minDim * 0.08,
+      right: minDim * 0.05,
+      bottom: minDim * 0.12,
+      left: minDim * 0.20
+    };
+
+    const plotWidth = this._width - margin.left - margin.right;
+    const plotHeight = this._height - margin.top - margin.bottom;
+
+    if (plotWidth <= 0 || plotHeight <= 0) {
+      return null;
+    }
+
+    return {
+      x: (x - margin.left) / plotWidth,
+      y: 1 - ((y - margin.top) / plotHeight)
+    };
+  }
+
+
+  
+  /**
+   * Sets up renderer-independent zooming and panning.
+   * Event listeners are attached to the chart element so they
+   * continue working when SVG or Canvas content is redrawn.
+   * @returns {void}
+   */
+  setupViewportListeners() {
+    if (this._viewportListenersAttached) {
+      return;
+    }
+
+    this._viewportListenersAttached = true;
+
+    this.style.cursor = 'grab';
+    this.style.touchAction = 'none';
+    this.style.userSelect = 'none';
+
+    // Zoom uniformly around the mouse position.
+    this.addEventListener('wheel', (event) => {
+      const mouse = this.getMousePosition(event);
+
+      if (!mouse || mouse.x < 0 || mouse.x > 1 ||
+          mouse.y < 0 || mouse.y > 1) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const bounds = this.getViewport();
+
+      // Trackpad pinch gestures commonly use Ctrl+wheel events.
+      // Increase pinch sensitivity without changing regular scrolling.
+      const sensitivity = event.ctrlKey ? 0.003 : 0.001;
+      const zoomFactor = Math.exp(event.deltaY * sensitivity);
+
+      // Both axes use exactly the same zoom factor.
+      const newRangeX = this._rangeX * zoomFactor;
+      const newRangeY = this._rangeY * zoomFactor;
+
+      if (newRangeX < 1e-9 || newRangeY < 1e-9 ||
+          newRangeX > 1e12 || newRangeY > 1e12) {
+        return;
+      }
+
+      const cursorX = bounds.minX + mouse.x * this._rangeX;
+      const cursorY = bounds.minY + mouse.y * this._rangeY;
+
+      this.setViewport(
+        cursorX - mouse.x * newRangeX,
+        cursorX + (1 - mouse.x) * newRangeX,
+        cursorY - mouse.y * newRangeY,
+        cursorY + (1 - mouse.y) * newRangeY
+      );
+    }, { passive: false });
+
+    // Begin dragging the graph.
+    this.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0) {
+        return;
+      }
+
+      const mouse = this.getMousePosition(event);
+
+      if (!mouse || mouse.x < 0 || mouse.x > 1 ||
+          mouse.y < 0 || mouse.y > 1) {
+        return;
+      }
+
+      const tooltip = document.getElementById('my-tooltip');
+
+      if (tooltip) {
+        tooltip.setAttribute('visible', 'false');
+      }
+
+      clearTimeout(window.__tooltipTimeout);
+      cancelAnimationFrame(window.__followRaf);
+
+      this._drag = {
+        x: mouse.x,
+        y: mouse.y
+      };
+
+      this.setPointerCapture(event.pointerId);
+      this.style.cursor = 'grabbing';
+      event.preventDefault();
+    });
+
+    // Shift the viewport while dragging.
+    this.addEventListener('pointermove', (event) => {
+      if (!this._drag) {
+        return;
+      }
+
+      const mouse = this.getMousePosition(event);
+
+      if (!mouse) {
+        return;
+      }
+
+      const bounds = this.getViewport();
+
+      const dx = (mouse.x - this._drag.x) * this._rangeX;
+      const dy = (mouse.y - this._drag.y) * this._rangeY;
+
+      this.setViewport(
+        bounds.minX - dx,
+        bounds.maxX - dx,
+        bounds.minY - dy,
+        bounds.maxY - dy
+      );
+
+      // Update the drag origin so zooming during a pan is preserved.
+      this._drag.x = mouse.x;
+      this._drag.y = mouse.y;
+    });
+
+    // Stop dragging when the mouse is released.
+    const stopDrag = () => {
+      this._drag = null;
+      this.style.cursor = 'grab';
+    };
+
+    this.addEventListener('pointerup', stopDrag);
+    this.addEventListener('pointercancel', stopDrag);
+    this.addEventListener('lostpointercapture', stopDrag);
+  }
+
+
   connectedCallback() {
     // This method is called when the element is added to the DOM
+    this.setupViewportListeners();
   }
 
   disconnectedCallback() {
@@ -410,7 +668,58 @@ class PlotBaseElement extends HTMLElement {
     // Let subclasses implement their own plot elements.
     svg += this.applyPlotElements(chartData, sizes, margin, scaleX, scaleY);
 
+    // Reset control appears when the chart is hovered or focused.
+    const buttonSize = Math.max(minDim * 0.07, 24);
+    const buttonX = x - margin.right - buttonSize;
+    const buttonY = margin.top;
+
+    svg += `
+      <style>
+        .reset-view-control {
+          opacity: 0;
+          cursor: pointer;
+          transition: opacity 0.15s ease;
+        }
+
+        svg:hover .reset-view-control,
+        .reset-view-control:focus {
+          opacity: 1;
+        }
+
+        .reset-view-control rect {
+          fill: #ffffff;
+          stroke: #999999;
+          stroke-width: 1;
+        }
+
+        .reset-view-control:hover rect,
+        .reset-view-control:focus rect {
+          fill: #eeeeee;
+        }
+
+        .reset-view-control text {
+          font-family: sans-serif;
+          font-size: ${buttonSize * 0.65}px;
+          fill: #333333;
+          text-anchor: middle;
+          dominant-baseline: central;
+          pointer-events: none;
+        }
+      </style>
+
+      <g class="reset-view-control"
+        role="button"
+        tabindex="0"
+        aria-label="Reset chart view"
+        transform="translate(${buttonX}, ${buttonY})">
+        <title>Reset chart view</title>
+        <rect width="${buttonSize}" height="${buttonSize}" rx="4" />
+        <text x="${buttonSize / 2}" y="${buttonSize / 2}">↺</text>
+      </g>
+    `;
+
     return svg + `</svg>`;
+
   }
 
   /**
@@ -448,23 +757,80 @@ class PlotBaseElement extends HTMLElement {
     }
   }
 
+  
   /**
-   * Renders the graph and places it in the shadow (virtual DOM).
+   * Renders the graph and places it in the shadow DOM.
    * @returns {void}
    */
   renderGraph() {
+    // Avoid rendering before chart properties are initialized.
+    if (
+      !Number.isFinite(this._width) ||
+      !Number.isFinite(this._height) ||
+      !Number.isFinite(this._rangeX) ||
+      !Number.isFinite(this._rangeY) ||
+      !Number.isFinite(this._anchorX) ||
+      !Number.isFinite(this._anchorY) ||
+      !Number.isFinite(this._ticks) ||
+      this._width <= 0 ||
+      this._height <= 0 ||
+      this._ticks <= 0 ||
+      this._rangeX < 0 ||
+      this._rangeY < 0 ||
+      !Array.isArray(this._points)
+    ) {
+      return;
+    }
+
     try {
+      // Stop any active tooltip animation before redrawing.
+      clearTimeout(window.__tooltipTimeout);
+      cancelAnimationFrame(window.__followRaf);
+
+      const tooltip = document.getElementById('my-tooltip');
+
+      if (tooltip) {
+        tooltip.setAttribute('visible', 'false');
+      }
+
       this.shadowDOM.innerHTML = this.generateGraph({
         points: this._points,
-        "x-axis-label": this._xAxisLabel,
-        "y-axis-label": this._yAxisLabel,
-        "title": this._title
-      }, this._width, this._height, this._center_origin, this._anchorX, this._anchorY, this._rangeX, this._rangeY, this._ticks);
-      this.setupHoverListeners();
+        'x-axis-label': this._xAxisLabel,
+        'y-axis-label': this._yAxisLabel,
+        'title': this._title
+      }, this._width, this._height, this._center_origin,
+         this._anchorX, this._anchorY, this._rangeX,
+         this._rangeY, this._ticks);
+
+      
+      // Reattach reset controls after each SVG redraw.
+      const resetButton = this.shadowDOM.querySelector('.reset-view-control');
+
+      if (resetButton) {
+        resetButton.addEventListener('pointerdown', (event) => {
+          // Prevent the chart's drag handler from starting.
+          event.stopPropagation();
+        });
+
+        resetButton.addEventListener('click', (event) => {
+          event.stopPropagation();
+          this.resetViewport();
+        });
+
+        resetButton.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            event.stopPropagation();
+            this.resetViewport();
+          }
+        });
+      }
+
     } catch (error) {
       console.error('Error rendering graph:', error);
     }
   }
+
 
   /**
    * Sets up the hover listeners for the graph when the mouse enters a data point.
