@@ -192,8 +192,42 @@ class PlotBaseElement extends HTMLElement {
     this._anchorX = anchorX;
     this._anchorY = anchorY;
     this._rangeX = rangeX;
-    this._rangeY = rangeY;
-    this._ticks = ticks;
+  this._rangeY = rangeY;
+  this._ticks = ticks;
+
+  // Save the initial viewport for the reset button.
+  this._initialViewport = {
+    centerOrigin,
+    anchorX,
+    anchorY,
+    rangeX,
+    rangeY
+  };
+
+  this.renderGraph();
+  }
+      
+
+  /**
+   * Restores the chart to its original viewport.
+   * @returns {void}
+   */
+  resetViewport() {
+    if (!this._initialViewport) {
+      return;
+    }
+
+    const initial = this._initialViewport;
+
+    this._center_origin = initial.centerOrigin;
+    this._anchorX = initial.anchorX;
+    this._anchorY = initial.anchorY;
+    this._rangeX = initial.rangeX;
+    this._rangeY = initial.rangeY;
+
+    this._drag = null;
+    this.style.cursor = 'grab';
+
     this.renderGraph();
   }
 
@@ -321,7 +355,11 @@ class PlotBaseElement extends HTMLElement {
       event.preventDefault();
 
       const bounds = this.getViewport();
-      const zoomFactor = Math.exp(event.deltaY * 0.001);
+
+      // Trackpad pinch gestures commonly use Ctrl+wheel events.
+      // Increase pinch sensitivity without changing regular scrolling.
+      const sensitivity = event.ctrlKey ? 0.003 : 0.001;
+      const zoomFactor = Math.exp(event.deltaY * sensitivity);
 
       // Both axes use exactly the same zoom factor.
       const newRangeX = this._rangeX * zoomFactor;
@@ -605,7 +643,58 @@ class PlotBaseElement extends HTMLElement {
     // Let subclasses implement their own plot elements.
     svg += this.applyPlotElements(chartData, sizes, margin, scaleX, scaleY);
 
+    // Reset control appears when the chart is hovered or focused.
+    const buttonSize = Math.max(minDim * 0.07, 24);
+    const buttonX = x - margin.right - buttonSize;
+    const buttonY = margin.top;
+
+    svg += `
+      <style>
+        .reset-view-control {
+          opacity: 0;
+          cursor: pointer;
+          transition: opacity 0.15s ease;
+        }
+
+        svg:hover .reset-view-control,
+        .reset-view-control:focus {
+          opacity: 1;
+        }
+
+        .reset-view-control rect {
+          fill: #ffffff;
+          stroke: #999999;
+          stroke-width: 1;
+        }
+
+        .reset-view-control:hover rect,
+        .reset-view-control:focus rect {
+          fill: #eeeeee;
+        }
+
+        .reset-view-control text {
+          font-family: sans-serif;
+          font-size: ${buttonSize * 0.65}px;
+          fill: #333333;
+          text-anchor: middle;
+          dominant-baseline: central;
+          pointer-events: none;
+        }
+      </style>
+
+      <g class="reset-view-control"
+        role="button"
+        tabindex="0"
+        aria-label="Reset chart view"
+        transform="translate(${buttonX}, ${buttonY})">
+        <title>Reset chart view</title>
+        <rect width="${buttonSize}" height="${buttonSize}" rx="4" />
+        <text x="${buttonSize / 2}" y="${buttonSize / 2}">↺</text>
+      </g>
+    `;
+
     return svg + `</svg>`;
+
   }
 
   /**
@@ -688,7 +777,30 @@ class PlotBaseElement extends HTMLElement {
          this._anchorX, this._anchorY, this._rangeX,
          this._rangeY, this._ticks);
 
-      this.setupHoverListeners();
+      
+      // Reattach reset controls after each SVG redraw.
+      const resetButton = this.shadowDOM.querySelector('.reset-view-control');
+
+      if (resetButton) {
+        resetButton.addEventListener('pointerdown', (event) => {
+          // Prevent the chart's drag handler from starting.
+          event.stopPropagation();
+        });
+
+        resetButton.addEventListener('click', (event) => {
+          event.stopPropagation();
+          this.resetViewport();
+        });
+
+        resetButton.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            event.stopPropagation();
+            this.resetViewport();
+          }
+        });
+      }
+
     } catch (error) {
       console.error('Error rendering graph:', error);
     }
