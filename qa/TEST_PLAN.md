@@ -57,7 +57,7 @@ input that parses fine still draws a broken or blank chart.
 
 ## Bugs found
 
-14 open bugs. BUG-01 (line chart not sorted by X) was fixed by David in #3. Owners follow the meeting-notes roles; reassign in GitHub issues as needed.
+
 Fixture files are in `qa/fixtures/`.
 
 ### High: fix first
@@ -71,9 +71,6 @@ Fixture files are in `qa/fixtures/`.
 | ID | Problem | Reproduce | Fix | Owner |
 |---|---|---|---|---|
 | BUG-04 | A single point at (0, 0) gives NaN coordinates and a blank chart | `single-point-origin.csv` | Treat a zero range as 1 | Charlie |
-| BUG-08 | Imported titles/labels have no length limit; 100k characters overflow the chart | `title-100k-chars.json` | Apply the form's limits | Nathan |
-| BUG-09 | A numeric JSON title breaks Save | `numeric-title.json`, then Save | Convert the title to a string | Nathan |
-| BUG-10 | A trailing comma adds a phantom 0 (`1, 2, 3,`) | Manual entry | Ignore empty entries | Nathan |
 | BUG-14 | Publish CI fails on every push without a version bump | Actions history | Skip if the version is already on npm | Brian |
 | BUG-15 | `package.json` `main` points to a missing file | `import 'zing-plot-plus-plus'` | Point to `src/detailedPlots.js` | Brian |
 
@@ -82,10 +79,6 @@ Fixture files are in `qa/fixtures/`.
 | ID | Problem | Reproduce | Fix | Owner |
 |---|---|---|---|---|
 | BUG-03 | Missing labels print "undefined" | Library call without labels | Default to empty | Charlie |
-| BUG-06 | `null` in JSON shows a raw JavaScript error | `null-point.json` | Validate each point | Nathan |
-| BUG-07 | Hex/binary accepted as numbers (`0x10` → 16) | `hex-binary-values.csv` | Accept decimal only | Nathan |
-| BUG-12 | Values near the float max overflow the axis to Infinity | `huge-values.csv` | Reject values over 1e300 | Nathan |
-| BUG-13 | A leading comma gives a misleading error | Manual entry `,1,2` | Same fix as BUG-10 | Nathan |
 | BUG-16 | `// TODO` in the SVG `<style>` silently drops a CSS rule | `plotBase.js` | Use `/* */` | Charlie |
 | BUG-17 | Changing a label attribute after render throws | `setAttribute('x-axis-label', …)` | Fix the selectors | Brian |
 
