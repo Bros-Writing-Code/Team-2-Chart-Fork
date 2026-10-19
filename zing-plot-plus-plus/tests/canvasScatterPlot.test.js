@@ -47,7 +47,10 @@ describe('canvas-scatter-plot', () => {
 
   test('draws the tick numbers, title and labels where the SVG has them', () => {
     const svg = drawSVG();
-    const svgTexts = [...svg.matchAll(/<text ([^>]*)>([^<]*)<\/text>/g)].map(([, tag, text]) => {
+    // Compare chart labels only; the SVG reset button is a separate UI control.
+    const svgTexts = [...svg.matchAll(/<text ([^>]*)>([^<]*)<\/text>/g)]
+      .filter(([, tag]) => ["axis-text", "label-text", "title-text"].includes(attrs(tag).class))
+      .map(([, tag, text]) => {
       const a = attrs(tag);
       // The y-axis label is rotated about its own x/y, so its position is that point.
       return { text, x: +a.x, y: +a.y };

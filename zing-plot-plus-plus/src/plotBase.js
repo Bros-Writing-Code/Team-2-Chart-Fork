@@ -669,7 +669,7 @@ class PlotBaseElement extends HTMLElement {
     svg += this.applyPlotElements(chartData, sizes, margin, scaleX, scaleY);
 
     // Reset control appears when the chart is hovered or focused.
-    const buttonSize = Math.max(minDim * 0.07, 24);
+    const buttonSize = Math.max(Math.min(x, y) * 0.07, 24);
     const buttonX = x - margin.right - buttonSize;
     const buttonY = margin.top;
 
