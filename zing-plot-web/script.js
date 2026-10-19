@@ -448,58 +448,67 @@ function handleGenerateChart(event) {
   }
 }
 
-// Convert the current SVG chart into a PNG and download it locally.
+// Draw a chart element onto a canvas of the given size.
+// Canvas charts draw themselves; SVG charts (line plot) are turned into an image first.
+async function chartToCanvas(chartComponent, width, height) {
+  if (typeof chartComponent.toImageCanvas === "function") {
+    return chartComponent.toImageCanvas(width, height);
+  }
+  // Clone the SVG element to avoid modifying the original.
+  const svg = chartComponent.shadowRoot.querySelector("svg").cloneNode(true);
+  svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  svg.setAttribute("width", String(width));
+  svg.setAttribute("height", String(height));
+  const markup = new XMLSerializer().serializeToString(svg);
+  const svgURL = URL.createObjectURL(
+    new Blob(
+      [markup],
+      { type: "image/svg+xml;charset=utf-8" }
+    )
+  );
+  try {
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = reject;
+      image.src = svgURL;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d").drawImage(image, 0, 0);
+    return canvas;
+  } finally {
+    URL.revokeObjectURL(svgURL);
+  }
+}
+
+// Convert the current chart into a PNG and download it locally.
 async function handleSaveChart() {
   const button = $("save");
   button.disabled = true;
   try {
     // BACKEND HOOK: add cloud storage or a server export request here.
     const chartComponent = $("chart");
-    // Clone the SVG element to avoid modifying the original.
-    const svg = chartComponent.shadowRoot.querySelector("svg").cloneNode(true);
-    svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    svg.setAttribute("width", "1268");
-    svg.setAttribute("height", "1420");
-    const markup = new XMLSerializer().serializeToString(svg);
-    const svgURL = URL.createObjectURL(
-      new Blob(
-        [markup],
-        { type: "image/svg+xml;charset=utf-8" }
-      )
-    );
-    try {
-      const image = new Image();
-
-      await new Promise((resolve, reject) => {
-        image.onload = resolve;
-        image.onerror = reject;
-        image.src = svgURL;
-      });
-      const canvas = document.createElement("canvas");
-      canvas.width = 1268;
-      canvas.height = 1420;
-      canvas.getContext("2d").drawImage(image, 0, 0);
-      const blob = await new Promise((resolve) => {
-        canvas.toBlob(resolve, "image/png");
-      });
-      if (!blob) {
-        throw new Error("Unable to create the image.");
-      }
-      const downloadURL = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadURL;
-      link.download = (
-        dataset.title.replace(/[^\p{L}\p{N}\- _]/gu, "") ||
-        "chart"
-      ) + ".png";
-      link.click();
-      setTimeout(() => {
-        URL.revokeObjectURL(downloadURL);
-      }, 2000);
-      notify("Chart saved as PNG.");
-    } finally {
-      URL.revokeObjectURL(svgURL);
+    const canvas = await chartToCanvas(chartComponent, 1268, 1420);
+    const blob = await new Promise((resolve) => {
+      canvas.toBlob(resolve, "image/png");
+    });
+    if (!blob) {
+      throw new Error("Unable to create the image.");
     }
+    const downloadURL = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadURL;
+    link.download = (
+      dataset.title.replace(/[^\p{L}\p{N}\- _]/gu, "") ||
+      "chart"
+    ) + ".png";
+    link.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(downloadURL);
+    }, 2000);
+    notify("Chart saved as PNG.");
   } catch (error) {
     notify("Could not save the chart. Please try again.", true);
   } finally {
@@ -586,7 +595,7 @@ function renderChart() {
     if (chartType === "line") {
       chart = document.createElement('line-plot');
     } else {
-      chart = document.createElement('scatter-plot');
+      chart = document.createElement('canvas-scatter-plot');
     }
     chart.setChartProperties({
       "title": dataset.title,

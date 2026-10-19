@@ -22,6 +22,114 @@ function escapeXML(value) {
 }
 
 /**
+ * Picks "nice" tick values (multiples of 1, 2, 5 or 10) between min and max.
+ * @param {number} min - Smallest value on the axis.
+ * @param {number} max - Largest value on the axis.
+ * @param {number} maxTicks - Roughly how many ticks to show.
+ * @returns {Array<number>} - The tick values.
+ */
+export function getTicks(min, max, maxTicks) {
+  const range = max - min;
+  const roughStep = range / maxTicks;
+  const stepPower = Math.pow(10, Math.floor(Math.log10(roughStep)));
+  const normalizedStep = roughStep / stepPower;
+
+  //Clamp ticks to multiples of 1/2/5/10, whichever is closer
+  let multiplier = 1;
+  if (normalizedStep >= 1.5 && normalizedStep < 3) multiplier = 2;
+  else if (normalizedStep >= 3 && normalizedStep < 7) multiplier = 5;
+  else if (normalizedStep >= 7) multiplier = 10;
+
+  const step = stepPower * multiplier;
+  const startTick = Math.ceil(min / step) * step;
+  //No epsilon bugs since 1e-6 comes after division
+  const numTicks = Math.floor((max - startTick) / step + 1e-6) + 1;
+
+  const ticks = [];
+  for (let i = 0; i < numTicks; i++) {
+    ticks.push(startTick + (i * step));
+  }
+  return ticks;
+}
+
+/**
+ * Formats an axis tick number, switching to scientific notation for very large or small values.
+ * @param {number} num - The tick value.
+ * @returns {string} - The text to show.
+ */
+export function formatAxisNumber(num) {
+  if (num === 0) return "0";
+  const absNum = Math.abs(num);
+  // switch to scientific notation if numbers are large/small
+  if (absNum >= 1e6 || absNum <= 1e-4) {
+    return num.toExponential(2); // e.g., 1.50e6
+  }
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 }).format(num);
+}
+
+/**
+ * Works out where everything goes on the chart: margins, sizes, the data -> pixel
+ * scales and the tick values. Shared by the SVG charts and <canvas-scatter-plot>.
+ * Takes the same arguments as PlotBaseElement.generateGraph (minus chartData).
+ * @returns {{margin: object, sizes: object, scaleX: function(number): number,
+ *   scaleY: function(number): number, xTicks: Array<number>, yTicks: Array<number>}}
+ */
+export function computeLayout(x, y, center, centerx, centery, rangeX, rangeY, ticks) {
+  const minDim = Math.min(x, y);
+
+  // TODO: Consolidate size parameters during generation? Update applyPlotElements if so.
+
+  const margin = {
+    top: minDim * 0.08,
+    right: minDim * 0.05,
+    bottom: minDim * 0.12,
+    left: minDim * 0.20
+  };
+
+  // sizes of various graph components as a % of SVG size, can change parameters
+  const sizes = {
+    // Actual plot dimensions
+    plotWidth: x - margin.left - margin.right,
+    plotHeight: y - margin.top - margin.bottom,
+    // Plot component dimensions
+    tickFont: minDim * 0.022,
+    labelFont: minDim * 0.03,
+    titleFont: minDim * 0.04,
+    pointRadius: Math.max(minDim * 0.008, 1.5),
+    axisStroke: Math.max(minDim * 0.003, 0.5),
+    gridStroke: Math.max(minDim * 0.0015, 0.25),
+    gridDash: Math.max(minDim * 0.008, 2)
+  };
+
+  // A zero range (e.g. a single point at the origin) would divide by zero, so treat it as 1
+  if (rangeX === 0) rangeX = 1;
+  if (rangeY === 0) rangeY = 1;
+
+  // calculate domain of graph
+  let domainMinX, domainMaxX, domainMinY, domainMaxY;
+  if (center === true) {
+    domainMinX = centerx - (rangeX / 2);
+    domainMaxX = centerx + (rangeX / 2);
+    domainMinY = centery - (rangeY / 2);
+    domainMaxY = centery + (rangeY / 2);
+  } else {
+    domainMinX = centerx;
+    domainMaxX = centerx + rangeX;
+    domainMinY = centery;
+    domainMaxY = centery + rangeY;
+  }
+
+  // Data point -> graph point functions, change these if we want to use a different scale (e.g logarithmic)
+  const scaleX = (val) => margin.left + ((val - domainMinX) / rangeX) * sizes.plotWidth;
+  const scaleY = (val) => margin.top + sizes.plotHeight - ((val - domainMinY) / rangeY) * sizes.plotHeight;
+
+  const xTicks = getTicks(domainMinX, domainMaxX, ticks);
+  const yTicks = getTicks(domainMinY, domainMaxY, ticks);
+
+  return { margin, sizes, scaleX, scaleY, xTicks, yTicks };
+}
+
+/**
  * A custom element representing a plottable scatter plot.
  * @property {Array<Point>} points - The data points to plot.
  * @property {string} title - The title of the chart.
@@ -236,91 +344,8 @@ class PlotBaseElement extends HTMLElement {
    */
 
   generateGraph(chartData, x, y, center, centerx, centery, rangeX, rangeY, ticks) {
-    const minDim = Math.min(x, y);
-
-    // TODO: Consolidate size parameters during generation? Update applyPlotElements if so.
-
-    const margin = {
-      top: minDim * 0.08,
-      right: minDim * 0.05,
-      bottom: minDim * 0.12,
-      left: minDim * 0.20
-    };
-
-    // sizes of various graph components as a % of SVG size, can change parameters
-    const sizes = {
-      // Actual plot dimensions
-      plotWidth: x - margin.left - margin.right,
-      plotHeight: y - margin.top - margin.bottom,
-      // Plot component dimensions
-      tickFont: minDim * 0.022,
-      labelFont: minDim * 0.03,
-      titleFont: minDim * 0.04,
-      pointRadius: Math.max(minDim * 0.008, 1.5),
-      axisStroke: Math.max(minDim * 0.003, 0.5),
-      gridStroke: Math.max(minDim * 0.0015, 0.25),
-      gridDash: Math.max(minDim * 0.008, 2)
-    };
-
-    // A zero range (e.g. a single point at the origin) would divide by zero, so treat it as 1
-    if (rangeX === 0) rangeX = 1;
-    if (rangeY === 0) rangeY = 1;
-
-    // calculate domain of graph
-    let domainMinX, domainMaxX, domainMinY, domainMaxY;
-    if (center === true) {
-      domainMinX = centerx - (rangeX / 2);
-      domainMaxX = centerx + (rangeX / 2);
-      domainMinY = centery - (rangeY / 2);
-      domainMaxY = centery + (rangeY / 2);
-    } else {
-      domainMinX = centerx;
-      domainMaxX = centerx + rangeX;
-      domainMinY = centery;
-      domainMaxY = centery + rangeY;
-    }
-
-    // Data point -> graph point functions, change these if we want to use a different scale (e.g logarithmic)
-    const scaleX = (val) => margin.left + ((val - domainMinX) / rangeX) * sizes.plotWidth;
-    const scaleY = (val) => margin.top + sizes.plotHeight - ((val - domainMinY) / rangeY) * sizes.plotHeight;
-
-    //add tick lines
-    const getTicks = (min, max, maxTicks) => {
-      const range = max - min;
-      const roughStep = range / maxTicks;
-      const stepPower = Math.pow(10, Math.floor(Math.log10(roughStep)));
-      const normalizedStep = roughStep / stepPower;
-
-      //Clamp ticks to multiples of 1/2/5/10, whichever is closer
-      let multiplier = 1;
-      if (normalizedStep >= 1.5 && normalizedStep < 3) multiplier = 2;
-      else if (normalizedStep >= 3 && normalizedStep < 7) multiplier = 5;
-      else if (normalizedStep >= 7) multiplier = 10;
-
-      const step = stepPower * multiplier;
-      const startTick = Math.ceil(min / step) * step;
-      //No epsilon bugs since 1e-6 comes after division
-      const numTicks = Math.floor((max - startTick) / step + 1e-6) + 1;
-
-      const ticks = [];
-      for (let i = 0; i < numTicks; i++) {
-        ticks.push(startTick + (i * step));
-      }
-      return ticks;
-    };
-    const xTicks = getTicks(domainMinX, domainMaxX, ticks);
-    const yTicks = getTicks(domainMinY, domainMaxY, ticks);
-
-    //format numbers properly
-    const formatAxisNumber = (num) => {
-      if (num === 0) return "0";
-      const absNum = Math.abs(num);
-      // switch to scientific notation if numbers are large/small
-      if (absNum >= 1e6 || absNum <= 1e-4) {
-        return num.toExponential(2); // e.g., 1.50e6
-      }
-      return new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 }).format(num);
-    };
+    const { margin, sizes, scaleX, scaleY, xTicks, yTicks } =
+      computeLayout(x, y, center, centerx, centery, rangeX, rangeY, ticks);
 
     // build svg, check style for possible customization, using class tags for simplicity
     let svg = `<svg width="${x}" height="${y}" viewBox="0 0 ${x} ${y}" xmlns="http://www.w3.org/2000/svg">
