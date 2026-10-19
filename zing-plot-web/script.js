@@ -10,6 +10,8 @@ let dataset = {
   x: [1, 2, 3, 4, 5, 6],
   y: [1, 3, 4, 6, 5, 8],
 };
+// The last imported file's columns, used by the X/Y column picker.
+let imported = null;
 
 let prevWidth = window.innerWidth;
 let prevHeight = window.innerHeight;
@@ -30,23 +32,55 @@ function escapeXML(value) {
   );
 }
 
-// Convert comma-separated or whitespace-separated input into numeric values.
-function numbers(value) {
-  const pieces = String(value).trim().split(/[\s,;]+/);
+// Input limits. MAX_POINTS is expected to change with the Canvas renderer.
+const MAX_POINTS = 10000;
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_ABS = 1e300; // Larger values overflow the axis range math.
+const TITLE_MAX = 100; // Matches the form's maxlength.
+const LABEL_MAX = 60;
 
-  if (!pieces[0]) {
+// Plain decimals with optional scientific notation; no hex, binary or octal.
+const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i;
+// A leading, trailing or doubled separator in manual entry.
+const EMPTY_ENTRY = /^[,;]|[,;]\s*[,;]|[,;]$/;
+
+// Convert one imported or typed value to a number, or throw a user-facing error.
+function toNumber(value) {
+  if (
+    (typeof value !== "number" && typeof value !== "string") ||
+    String(value).trim() === ""
+  ) {
+    throw new Error("X and Y values must be numbers.");
+  }
+  const text = String(value).trim();
+  if (typeof value === "string" && !DECIMAL.test(text)) {
+    throw new Error(
+      "X and Y values must be valid numbers." +
+      (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(text)
+        ? " Remove thousands separators (1,000 → 1000)."
+        : "")
+    );
+  }
+  const number = Number(text);
+  if (!Number.isFinite(number)) {
+    throw new Error("X and Y values must be valid numbers.");
+  }
+  if (Math.abs(number) > MAX_ABS) {
+    throw new Error("Values are too large (limit ±1e300).");
+  }
+  return number;
+}
+
+// Convert comma-separated or whitespace-separated input into numeric values.
+// Empty entries (",1,2" or "1,2,") are skipped; see EMPTY_ENTRY for the warning.
+function numbers(value) {
+  const pieces = String(value).trim().split(/[\s,;]+/).filter(Boolean);
+
+  if (!pieces.length) {
     throw new Error("Please enter X and Y values.");
   }
 
-  return pieces.map((value) => {
-    const number = Number(value);
-
-    if (!Number.isFinite(number)) {
-      throw new Error("X and Y values must be valid numbers.");
-    }
-
-    return number;
-  });
+  return pieces.map(toNumber);
 }
 
 // Check that X and Y contain matching arrays of valid numeric values.
@@ -59,40 +93,20 @@ function validate(data) {
   ) {
     throw new Error("X and Y must contain the same number of values.");
   }
-  if (data.x.length > 10000) {
-    throw new Error("Please use no more than 10,000 points.");
-  }
-  const toNumber = (value) => {
-    if (
-      value == null ||
-      typeof value === "boolean" ||
-      String(value).trim() === ""
-    ) {
-      throw new Error("X and Y values must be numbers.");
-    }
-    const number = Number(value);
-    if (!Number.isFinite(number)) {
-      throw new Error("X and Y values must be valid numbers.");
-    }
-    return number;
-  };
-  const x = data.x.map(toNumber);
-  const y = data.y.map(toNumber);
-  // Negative values are out of scope: the axes always start at 0, so they would
-  // be drawn off-chart. Tell the user instead of showing a blank chart.
-  if (x.some((n) => n < 0) || y.some((n) => n < 0)) {
+  if (data.x.length > MAX_POINTS) {
     throw new Error(
-      "Negative values are not supported. Please use X and Y values of 0 or greater."
+      `Please use no more than ${MAX_POINTS.toLocaleString("en-US")} points.`
     );
   }
-  return { ...data, x, y };
+  return { ...data, x: data.x.map(toNumber), y: data.y.map(toNumber) };
 }
 
-// Display success messages or validation errors below the input card.
-function notify(text, error = false) {
+// Display messages below the input card. kind: true = error, "warning" = warning.
+function notify(text, kind = false) {
   $("message").hidden = !text;
   $("message").textContent = text;
-  $("message").classList.toggle("error", error);
+  $("message").classList.toggle("error", kind === true);
+  $("message").classList.toggle("warning", kind === "warning");
 }
 
 // Read and validate the current values from the manual input fields.
@@ -189,86 +203,142 @@ function parseCSV(text) {
     throw new Error("The CSV file is empty.");
   }
   let headers = null;
-  if (
-    rows[0].some(
-      (value) => value === "" || !Number.isFinite(Number(value))
-    )
-  ) {
+  if (rows[0].some((value) => !DECIMAL.test(value))) {
     headers = rows.shift();
   }
   if (!rows.length || rows.some((row) => row.length < 2)) {
     throw new Error("CSV needs two columns: X and Y.");
   }
-  let xIndex = 0;
-  let yIndex = 1;
-  if (headers) {
-    const names = headers.map((value) => value.toLowerCase());
-
-    if (names.includes("x") && names.includes("y")) {
-      xIndex = names.indexOf("x");
-      yIndex = names.indexOf("y");
-    }
-  }
+  const width = Math.max(...rows.map((row) => row.length));
   return {
-    x: rows.map((row) => row[xIndex]),
-    y: rows.map((row) => row[yIndex]),
-    ...(headers
-      ? {
-        xLabel: headers[xIndex],
-        yLabel: headers[yIndex],
-      }
-      : {}),
+    columns: Array.from({ length: width }, (_, i) => ({
+      name: headers?.[i] || `Column ${i + 1}`,
+      generic: !headers?.[i],
+      values: rows.map((row) => row[i]),
+    })),
   };
 }
 
-// Normalize supported JSON formats into the shared dataset structure.
+// Turn [[x, y, ...], ...] or [{x, y, ...}, ...] into columns. The first point
+// sets the format; any point that doesn't match it is reported by position.
+function pointsToColumns(points) {
+  if (!points.length) {
+    throw new Error("The JSON file is empty.");
+  }
+  const isPair = Array.isArray(points[0]);
+  const keys = isPair
+    ? points[0].map((_, i) => i)
+    : Object.keys(points[0] ?? {});
+  points.forEach((point, i) => {
+    const ok = isPair
+      ? Array.isArray(point) && point.length >= 2
+      : point && typeof point === "object" && !Array.isArray(point);
+    if (!ok || keys.length < 2) {
+      throw new Error(`Point ${i + 1} is invalid: expected [x, y] or {x, y}.`);
+    }
+  });
+  return keys.map((key) => ({
+    name: isPair ? `Column ${key + 1}` : key,
+    generic: isPair,
+    values: points.map((point) => point[key]),
+  }));
+}
+
+// Normalize supported JSON formats into named columns. Only known keys are read.
 function parseJSON(text) {
   const value = JSON.parse(text.replace(/^\uFEFF/, ""));
   if (Array.isArray(value)) {
-    if (!value.length) {
-      throw new Error("The JSON file is empty.");
-    }
-    return {
-      x: value.map(
-        (point) => Array.isArray(point) ? point[0] : point.x
-      ),
-      y: value.map(
-        (point) => Array.isArray(point) ? point[1] : point.y
-      ),
-    };
+    return { columns: pointsToColumns(value) };
   }
   if (!value || typeof value !== "object") {
     throw new Error(
       "JSON needs X and Y arrays or an array of points."
     );
   }
+  const x = value.x || value.xValues;
+  const y = value.y || value.yValues;
   const points = value.data || value.points;
+  let columns;
+  if (x || y) {
+    columns = [
+      { name: "x", generic: false, values: x },
+      { name: "y", generic: false, values: y },
+    ];
+  } else if (Array.isArray(points)) {
+    columns = pointsToColumns(points);
+  } else {
+    columns = Object.keys(value)
+      .filter((key) => Array.isArray(value[key]))
+      .map((key) => ({ name: key, generic: false, values: value[key] }));
+  }
+  if (columns.length < 2) {
+    throw new Error(
+      "JSON needs X and Y arrays or an array of points."
+    );
+  }
   return {
-    ...value,
-    title: value.title || value.chartTitle,
-    xLabel: value.xLabel || value.xAxisLabel,
-    yLabel: value.yLabel || value.yAxisLabel,
-    x:
-      value.x ||
-      value.xValues ||
-      (
-        Array.isArray(points)
-          ? points.map(
-            (point) => Array.isArray(point) ? point[0] : point.x
-          )
-          : undefined
-      ),
-    y:
-      value.y ||
-      value.yValues ||
-      (
-        Array.isArray(points)
-          ? points.map(
-            (point) => Array.isArray(point) ? point[1] : point.y
-          )
-          : undefined
-      ),
+    title: value.title ?? value.chartTitle,
+    xLabel: value.xLabel ?? value.xAxisLabel,
+    yLabel: value.yLabel ?? value.yAxisLabel,
+    columns,
   };
+}
+
+// Columns with at least one usable number, offered in the X/Y picker. Text
+// columns (e.g. names) are left out; a mostly numeric column with a bad cell
+// stays in so validate() reports it.
+function numericColumns(table) {
+  const columns = table.columns.filter(
+    (column) => Array.isArray(column.values) && column.values.some((value) => {
+      try {
+        toNumber(value);
+        return true;
+      } catch {
+        return false;
+      }
+    })
+  );
+  // Too few to choose from: fall back so validate() names the real problem.
+  return columns.length >= 2 ? columns : table.columns;
+}
+
+// Prefer columns named x and y; otherwise use the first two.
+function defaultColumns(columns) {
+  const find = (name) =>
+    columns.find((column) => String(column.name).toLowerCase() === name);
+  return find("x") && find("y")
+    ? [find("x"), find("y")]
+    : [columns[0], columns[1]];
+}
+
+// Imported title/labels: text or numbers only, capped to the form's limits.
+function cleanText(value, max, fallback) {
+  if (typeof value !== "string" && typeof value !== "number") {
+    return fallback;
+  }
+  return String(value).trim().slice(0, max) || fallback;
+}
+
+// Build a validated dataset from the chosen columns of an imported table.
+function buildDataset(table, xColumn, yColumn, current) {
+  const label = (fromFile, column, fallback) =>
+    fromFile ?? (column.generic ? fallback : column.name);
+  const raw = {
+    title: table.title ?? current.title,
+    xLabel: label(table.xLabel, xColumn, current.xLabel),
+    yLabel: label(table.yLabel, yColumn, current.yLabel),
+  };
+  const data = validate({
+    title: cleanText(raw.title, TITLE_MAX, current.title),
+    xLabel: cleanText(raw.xLabel, LABEL_MAX, current.xLabel),
+    yLabel: cleanText(raw.yLabel, LABEL_MAX, current.yLabel),
+    x: xColumn.values,
+    y: yColumn.values,
+  });
+  data.shortened = String(raw.title).length > TITLE_MAX ||
+    String(raw.xLabel).length > LABEL_MAX ||
+    String(raw.yLabel).length > LABEL_MAX;
+  return data;
 }
 
 // Import a local file, validate its data, and update the form and chart.
@@ -277,31 +347,39 @@ async function importFile(file) {
     return;
   }
   try {
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > MAX_FILE_BYTES) {
       throw new Error("Please choose a file smaller than 5 MB.");
     }
     // BACKEND HOOK: upload the file using FormData here if server parsing is added.
     const text = await file.text();
-    let incoming;
+    let table;
     if (/\.json$/i.test(file.name)) {
-      incoming = parseJSON(text);
+      table = parseJSON(text);
     } else if (/\.csv$/i.test(file.name)) {
-      incoming = parseCSV(text);
+      table = parseCSV(text);
     } else {
       throw new Error("Please choose a .json or .csv file.");
     }
-    dataset = validate({
-      ...dataset,
-      ...incoming,
-      title: incoming.title || dataset.title,
-      xLabel: incoming.xLabel || dataset.xLabel,
-      yLabel: incoming.yLabel || dataset.yLabel,
-    });
-    updateForm(dataset);
+    const columns = numericColumns(table);
+    const [xColumn, yColumn] = defaultColumns(columns);
+    applyColumns(table, xColumn, yColumn);
+    // Let the user pick other columns when the file has more than two.
+    // applied: the column indices on screen, restored if a new pick fails.
+    imported = {
+      table,
+      columns,
+      applied: [columns.indexOf(xColumn), columns.indexOf(yColumn)],
+    };
+    $("column-picker").hidden = columns.length < 3;
+    for (const [id, chosen] of [["x-column", xColumn], ["y-column", yColumn]]) {
+      $(id).replaceChildren(...columns.map((column, i) =>
+        new Option(column.name, i, false, column === chosen)
+      ));
+    }
     $("file-status").textContent = file.name;
-    renderChart();
     notify(
-      `Loaded ${dataset.x.length} data points from ${file.name}.`
+      `Loaded ${dataset.x.length} data points from ${file.name}.` +
+      (dataset.shortened ? " Long title/labels were shortened." : "")
     );
   } catch (error) {
     notify(
@@ -315,13 +393,48 @@ async function importFile(file) {
   }
 }
 
+// Plot the chosen columns of an imported table and show them in the form.
+function applyColumns(table, xColumn, yColumn) {
+  dataset = buildDataset(table, xColumn, yColumn, dataset);
+  updateForm(dataset);
+  renderChart();
+}
+
+// Redraw when the user picks a different X or Y column.
+function handleColumnChange() {
+  try {
+    const { table, columns } = imported;
+    applyColumns(
+      table,
+      columns[$("x-column").value],
+      columns[$("y-column").value]
+    );
+    imported.applied = [$("x-column").value, $("y-column").value];
+    notify(dataset.shortened ? "Long title/labels were shortened." : "", "warning");
+  } catch (error) {
+    // Keep the dropdowns in sync with the chart, which still shows the old columns.
+    [$("x-column").value, $("y-column").value] = imported.applied;
+    notify(error.message, true);
+  }
+}
+
 // Apply manual input when the Generate Chart button is pressed.
 function handleGenerateChart(event) {
   event.preventDefault();
   try {
     dataset = readForm();
     renderChart();
-    notify("");
+    // Manual data replaces the imported file, so its column choice no longer applies.
+    $("column-picker").hidden = true;
+    const skipped = [["x-values", "X"], ["y-values", "Y"]]
+      .filter(([id]) => EMPTY_ENTRY.test($(id).value.trim()))
+      .map(([, name]) => name);
+    notify(
+      skipped.length
+        ? `Ignored empty entries in ${skipped.join(" and ")} values.`
+        : "",
+      "warning"
+    );
     const button = document.querySelector(".generate");
     const originalContent = button.innerHTML;
     button.disabled = true;
@@ -432,6 +545,8 @@ function bindEvents() {
   $("file-input").addEventListener("change", (event) => {
     importFile(event.target.files[0]);
   });
+  $("x-column").addEventListener("change", handleColumnChange);
+  $("y-column").addEventListener("change", handleColumnChange);
   // Allow file drops and show the upload area's highlighted state.
   for (const eventName of ["dragenter", "dragover"]) {
     $("drop-zone").addEventListener(eventName, (event) => {
@@ -443,7 +558,9 @@ function bindEvents() {
     $("drop-zone").addEventListener(eventName, (event) => {
       event.preventDefault();
       $("drop-zone").classList.remove("dragging");
-      if (eventName === "drop") {
+      if (eventName === "drop" && event.dataTransfer.files.length > 1) {
+        notify("Please drop one file at a time.", true);
+      } else if (eventName === "drop") {
         importFile(event.dataTransfer.files[0]);
       }
     });
