@@ -4,7 +4,7 @@ import { instanceOf } from './helpers/dom-stub.js';
 import { fakeContext } from './helpers/fake-canvas.js';
 import '../src/detailedPlots.js';
 import { pointDrawRadius } from '../src/canvasScatterPlot.js';
-import { computeLayout } from '../src/plotBase.js';
+import { computeLayout, resetButtonLayout } from '../src/plotBase.js';
 
 // <canvas-scatter-plot> draws the whole chart on a canvas. These tests draw it on a
 // fake canvas (helpers/fake-canvas.js) and check it against the SVG that <scatter-plot>
@@ -46,7 +46,8 @@ describe('canvas-scatter-plot', () => {
   });
 
   test('draws the tick numbers, title and labels where the SVG has them', () => {
-    const svg = drawSVG();
+    // The reset button is a <button> over the canvas, not drawn text, so leave it out.
+    const svg = drawSVG().replace(/<g class="reset-view-control"[\s\S]*?<\/g>/, '');
     const svgTexts = [...svg.matchAll(/<text ([^>]*)>([^<]*)<\/text>/g)].map(([, tag, text]) => {
       const a = attrs(tag);
       // The y-axis label is rotated about its own x/y, so its position is that point.
@@ -97,6 +98,17 @@ describe('canvas-scatter-plot', () => {
     assert.deepEqual(ctx.fillRects, [[0, 0, 500, 400, '#ffffff']]);
     assert.equal(ctx.circles.length, 0);
     assert.ok(ctx.lines.length > 0);
+  });
+
+  test('puts the reset button where the SVG has it', () => {
+    const { margin } = computeLayout(...ARGS);
+    const button = resetButtonLayout(ARGS[0], ARGS[1], margin);
+    const svgControl = drawSVG().match(/<g class="reset-view-control"[\s\S]*?<\/g>/)[0];
+    assert.ok(svgControl.includes(`transform="translate(${button.x}, ${button.y})"`));
+    assert.ok(svgControl.includes(`<rect width="${button.size}" height="${button.size}"`));
+    // Its top-right corner is the plot area's (480, 32), see 'clips the points to the plot area'
+    assert.equal(button.x + button.size, 480);
+    assert.equal(button.y, 32);
   });
 
   test('describes the chart in words for screen readers', () => {

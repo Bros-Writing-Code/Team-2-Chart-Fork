@@ -130,6 +130,19 @@ export function computeLayout(x, y, center, centerx, centery, rangeX, rangeY, ti
 }
 
 /**
+ * Where the reset-view button goes: a square in the top-right corner of the plot area.
+ * Shared by the SVG charts and <canvas-scatter-plot> so the button is in the same place.
+ * @param {number} x - Width of the component
+ * @param {number} y - Height of the component
+ * @param {object} margin - The margin from computeLayout()
+ * @returns {{x: number, y: number, size: number}} - Top-left corner and side length in pixels.
+ */
+export function resetButtonLayout(x, y, margin) {
+  const size = Math.max(Math.min(x, y) * 0.07, 24);
+  return { x: x - margin.right - size, y: margin.top, size };
+}
+
+/**
  * A custom element representing a plottable scatter plot.
  * @property {Array<Point>} points - The data points to plot.
  * @property {string} title - The title of the chart.
@@ -340,6 +353,31 @@ class PlotBaseElement extends HTMLElement {
   }
 
   
+  /**
+   * Makes an element act as the reset-view button: click, Enter or Space resets the view.
+   * @param {Element} control - The reset button element.
+   * @returns {void}
+   */
+  attachResetControl(control) {
+    control.addEventListener('pointerdown', (event) => {
+      // Prevent the chart's drag handler from starting.
+      event.stopPropagation();
+    });
+
+    control.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.resetViewport();
+    });
+
+    control.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        event.stopPropagation();
+        this.resetViewport();
+      }
+    });
+  }
+
   /**
    * Gets the current visible coordinate boundaries of the graph.
    * @returns {object} - The minimum and maximum X and Y values.
@@ -669,9 +707,7 @@ class PlotBaseElement extends HTMLElement {
     svg += this.applyPlotElements(chartData, sizes, margin, scaleX, scaleY);
 
     // Reset control appears when the chart is hovered or focused.
-    const buttonSize = Math.max(minDim * 0.07, 24);
-    const buttonX = x - margin.right - buttonSize;
-    const buttonY = margin.top;
+    const { x: buttonX, y: buttonY, size: buttonSize } = resetButtonLayout(x, y, margin);
 
     svg += `
       <style>
@@ -807,23 +843,7 @@ class PlotBaseElement extends HTMLElement {
       const resetButton = this.shadowDOM.querySelector('.reset-view-control');
 
       if (resetButton) {
-        resetButton.addEventListener('pointerdown', (event) => {
-          // Prevent the chart's drag handler from starting.
-          event.stopPropagation();
-        });
-
-        resetButton.addEventListener('click', (event) => {
-          event.stopPropagation();
-          this.resetViewport();
-        });
-
-        resetButton.addEventListener('keydown', (event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            event.stopPropagation();
-            this.resetViewport();
-          }
-        });
+        this.attachResetControl(resetButton);
       }
 
     } catch (error) {
