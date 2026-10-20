@@ -305,3 +305,456 @@ describe('chart viewport (zooming and panning)', () => {
   });
 });
 
+function inBrowser(fn, { tooltip = null } = {}) {
+  const names = ['window', 'document', 'cancelAnimationFrame', 'requestAnimationFrame'];
+  const saved = names.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
+  const browser = { tooltip, window: { scrollX: 0, scrollY: 0 } };
+  Object.assign(globalThis, {
+    window: browser.window,
+    document: { getElementById: (id) => (id === 'my-tooltip' ? browser.tooltip : null) },
+    cancelAnimationFrame() {},
+    requestAnimationFrame() { return 0; },
+  });
+  try {
+    return fn(browser);
+  } finally {
+    for (const [name, descriptor] of saved) {
+      if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+      else delete globalThis[name];
+    }
+  }
+}
+
+const fakeTooltip = () => ({ attrs: {}, setAttribute(name, value) { this.attrs[name] = value; } });
+
+const fakeEvent = (fields = {}) => ({
+  stopped: false,
+  prevented: false,
+  stopPropagation() { this.stopped = true; },
+  preventDefault() { this.prevented = true; },
+  ...fields,
+});
+
+const nearly = (actual, expected) =>
+  assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} is not close to ${expected}`);
+
+describe('chart viewport: mouse wheel, dragging and the reset button', () => {
+  // A 500x400 chart: the plot area spans x 80..480, y 32..352, so its middle is (280, 192).
+
+  /** A chart whose event listeners are captured, so tests can fire events directly. */
+  function interactiveChart({ rangeX = 10, rangeY = 10 } = {}) {
+    const plot = instanceOf('scatter-plot');
+    Object.assign(plot, {
+      _width: 500, _height: 400, _center_origin: false,
+      _anchorX: 0, _anchorY: 0, _rangeX: rangeX, _rangeY: rangeY, _ticks: 5, _points: [],
+    });
+    plot.redraws = 0;
+    plot.renderGraph = () => { plot.redraws += 1; };
+    plot.style = {};
+    plot.shadowDOM = {
+      querySelector: () => ({ getBoundingClientRect: () => ({ left: 0, top: 0, width: 500, height: 400 }) }),
+    };
+    plot.setPointerCapture = (id) => { plot.captured = id; };
+    const listeners = {};
+    const registered = [];
+    plot.addEventListener = (type, handler, options) => {
+      listeners[type] = handler;
+      registered.push({ type, options });
+    };
+    plot.setupViewportListeners();
+    return { plot, listeners, registered };
+  }
+
+  const wheel = (clientX, clientY, deltaY, ctrlKey = false) => fakeEvent({ clientX, clientY, deltaY, ctrlKey });
+
+  test('registers its listeners only once, and the wheel listener may block page scrolling', () => {
+    const { plot, registered } = interactiveChart();
+    assert.deepEqual(
+      registered.map((r) => r.type).sort(),
+      ['lostpointercapture', 'pointercancel', 'pointerdown', 'pointermove', 'pointerup', 'wheel'],
+    );
+    assert.equal(registered.find((r) => r.type === 'wheel').options.passive, false);
+    plot.setupViewportListeners();
+    assert.equal(registered.length, 6);
+    assert.deepEqual([plot.style.cursor, plot.style.touchAction, plot.style.userSelect], ['grab', 'none', 'none']);
+  });
+
+  test('scrolling up zooms in around the mouse, keeping the view centered there', () => {
+    const { plot, listeners } = interactiveChart();
+    const event = wheel(280, 192, -100);
+    listeners.wheel(event);
+    const factor = Math.exp(-100 * 0.001);
+    nearly(plot._rangeX, 10 * factor);
+    nearly(plot._rangeY, 10 * factor);
+    const view = plot.getViewport();
+    nearly((view.minX + view.maxX) / 2, 5);
+    nearly((view.minY + view.maxY) / 2, 5);
+    assert.ok(event.prevented, 'the page should not scroll while zooming');
+  });
+
+  test('scrolling down zooms out', () => {
+    const { plot, listeners } = interactiveChart();
+    listeners.wheel(wheel(280, 192, 100));
+    nearly(plot._rangeX, 10 * Math.exp(0.1));
+    nearly(plot._rangeY, 10 * Math.exp(0.1));
+  });
+
+  test('Ctrl+wheel (a trackpad pinch) zooms three times faster', () => {
+    const { plot, listeners } = interactiveChart();
+    listeners.wheel(wheel(280, 192, -100, true));
+    nearly(plot._rangeX, 10 * Math.exp(-0.3));
+  });
+
+  test('the point under the mouse stays put: zooming at a corner keeps that corner fixed', () => {
+    const bottomLeft = interactiveChart();
+    bottomLeft.listeners.wheel(wheel(80, 352, -100));
+    nearly(bottomLeft.plot.getViewport().minX, 0);
+    nearly(bottomLeft.plot.getViewport().minY, 0);
+
+    const topRight = interactiveChart();
+    topRight.listeners.wheel(wheel(480, 32, -100));
+    nearly(topRight.plot.getViewport().maxX, 10);
+    nearly(topRight.plot.getViewport().maxY, 10);
+  });
+
+  test('both axes zoom by the same factor, so their ratio is kept', () => {
+    const { plot, listeners } = interactiveChart({ rangeX: 20, rangeY: 10 });
+    listeners.wheel(wheel(280, 192, -300));
+    nearly(plot._rangeX / plot._rangeY, 2);
+  });
+
+  test('ignores the wheel outside the plot area', () => {
+    const { plot, listeners } = interactiveChart();
+    const event = wheel(10, 10, -100);
+    listeners.wheel(event);
+    assert.equal(plot.redraws, 0);
+    assert.equal(event.prevented, false, 'the page should keep scrolling');
+  });
+
+  test('stops zooming out at 1e12 and zooming in at 1e-9', () => {
+    for (const [range, deltaY] of [[1e12, 100], [1e-9, -100]]) {
+      const { plot, listeners } = interactiveChart({ rangeX: range, rangeY: range });
+      listeners.wheel(wheel(280, 192, deltaY));
+      assert.equal(plot._rangeX, range);
+      assert.equal(plot._rangeY, range);
+      assert.equal(plot.redraws, 0);
+    }
+  });
+
+  test('dragging pans the viewport and keeps its size', () => inBrowser(() => {
+    const { plot, listeners } = interactiveChart();
+    const down = fakeEvent({ button: 0, clientX: 280, clientY: 192, pointerId: 7 });
+    listeners.pointerdown(down);
+    assert.equal(plot.style.cursor, 'grabbing');
+    assert.equal(plot.captured, 7);
+    assert.ok(down.prevented);
+
+    // Dragging right by 40px is 0.1 of the plot width, so the view shifts 1 unit left.
+    listeners.pointermove(fakeEvent({ clientX: 320, clientY: 192 }));
+    let view = plot.getViewport();
+    nearly(view.minX, -1); nearly(view.maxX, 9); nearly(view.minY, 0); nearly(view.maxY, 10);
+
+    // Staying where it is does not move it further...
+    listeners.pointermove(fakeEvent({ clientX: 320, clientY: 192 }));
+    nearly(plot.getViewport().minX, -1);
+
+    // ...and moving on continues from the last position, not from the start.
+    listeners.pointermove(fakeEvent({ clientX: 360, clientY: 192 }));
+    view = plot.getViewport();
+    nearly(view.minX, -2); nearly(view.maxX, 8);
+  }));
+
+  test('dragging up shifts the view down', () => inBrowser(() => {
+    const { plot, listeners } = interactiveChart();
+    listeners.pointerdown(fakeEvent({ button: 0, clientX: 280, clientY: 192 }));
+    listeners.pointermove(fakeEvent({ clientX: 280, clientY: 152 })); // 40px up = 0.125 of the height
+    const view = plot.getViewport();
+    nearly(view.minX, 0);
+    nearly(view.minY, -1.25);
+    nearly(view.maxY, 8.75);
+  }));
+
+  test('only the left mouse button starts a drag', () => inBrowser(() => {
+    const { plot, listeners } = interactiveChart();
+    listeners.pointerdown(fakeEvent({ button: 2, clientX: 280, clientY: 192 }));
+    assert.equal(plot._drag, undefined);
+    assert.equal(plot.style.cursor, 'grab');
+  }));
+
+  test('pressing outside the plot area does not start a drag', () => inBrowser(() => {
+    const { plot, listeners } = interactiveChart();
+    listeners.pointerdown(fakeEvent({ button: 0, clientX: 10, clientY: 10 }));
+    assert.equal(plot._drag, undefined);
+  }));
+
+  test('moving the mouse without pressing does nothing', () => {
+    const { plot, listeners } = interactiveChart();
+    listeners.pointermove(fakeEvent({ clientX: 320, clientY: 192 }));
+    assert.equal(plot.redraws, 0);
+  });
+
+  test('releasing, cancelling or losing the pointer ends the drag', () => {
+    for (const ending of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+      inBrowser(() => {
+        const { plot, listeners } = interactiveChart();
+        listeners.pointerdown(fakeEvent({ button: 0, clientX: 280, clientY: 192 }));
+        listeners[ending](fakeEvent());
+        assert.equal(plot._drag, null, ending);
+        assert.equal(plot.style.cursor, 'grab', ending);
+        const redrawsBefore = plot.redraws;
+        listeners.pointermove(fakeEvent({ clientX: 360, clientY: 192 }));
+        assert.equal(plot.redraws, redrawsBefore, `${ending}: moving afterwards must not pan`);
+      });
+    }
+  });
+
+  test('pressing on the chart hides the tooltip', () => {
+    const tooltip = fakeTooltip();
+    inBrowser(() => {
+      const { listeners } = interactiveChart();
+      listeners.pointerdown(fakeEvent({ button: 0, clientX: 280, clientY: 192 }));
+    }, { tooltip });
+    assert.equal(tooltip.attrs.visible, 'false');
+  });
+
+  describe('reset button', () => {
+    const fakeControl = () => {
+      const handlers = {};
+      return { handlers, addEventListener(type, handler) { handlers[type] = handler; } };
+    };
+
+    test('a click resets the view, and pressing it does not start a chart drag', () => {
+      const { plot } = interactiveChart();
+      let resets = 0;
+      plot.resetViewport = () => { resets += 1; };
+      const control = fakeControl();
+      plot.attachResetControl(control);
+
+      const press = fakeEvent();
+      control.handlers.pointerdown(press);
+      assert.ok(press.stopped);
+      assert.equal(resets, 0);
+
+      const click = fakeEvent();
+      control.handlers.click(click);
+      assert.ok(click.stopped);
+      assert.equal(resets, 1);
+    });
+
+    test('Enter and Space reset the view; other keys do not', () => {
+      const { plot } = interactiveChart();
+      let resets = 0;
+      plot.resetViewport = () => { resets += 1; };
+      const control = fakeControl();
+      plot.attachResetControl(control);
+
+      for (const key of ['Enter', ' ']) {
+        const event = fakeEvent({ key });
+        control.handlers.keydown(event);
+        assert.ok(event.prevented && event.stopped, `"${key}" should be handled`);
+      }
+      assert.equal(resets, 2);
+
+      for (const key of ['Tab', 'a', 'Escape']) {
+        const event = fakeEvent({ key });
+        control.handlers.keydown(event);
+        assert.equal(event.prevented, false, `"${key}" should be left alone`);
+      }
+      assert.equal(resets, 2);
+    });
+  });
+});
+
+describe('PlotBaseElement.renderGraph and its setters', () => {
+  function chartElement(overrides = {}) {
+    const plot = instanceOf('scatter-plot');
+    Object.assign(plot, {
+      _width: 500, _height: 400, _center_origin: false, _anchorX: 0, _anchorY: 0,
+      _rangeX: 10, _rangeY: 10, _ticks: 5, _points: pts([1, 2]), _title: 'T',
+      ...overrides,
+    });
+    plot.shadowDOM = { innerHTML: '', querySelector: () => null };
+    return plot;
+  }
+
+  test('draws an SVG once every property is set', () => inBrowser(() => {
+    const plot = chartElement();
+    plot.renderGraph();
+    assert.match(plot.shadowDOM.innerHTML, /^<svg/);
+  }));
+
+  test('a zero range still draws, without NaN', () => inBrowser(() => {
+    const plot = chartElement({ _rangeX: 0, _rangeY: 0 });
+    plot.renderGraph();
+    assert.match(plot.shadowDOM.innerHTML, /^<svg/);
+    assert.doesNotMatch(plot.shadowDOM.innerHTML, /NaN/);
+  }));
+
+  const notReady = [
+    ['no width', { _width: undefined }],
+    ['a zero width', { _width: 0 }],
+    ['a negative height', { _height: -5 }],
+    ['no ticks', { _ticks: 0 }],
+    ['NaN ticks', { _ticks: NaN }],
+    ['a negative x range', { _rangeX: -1 }],
+    ['a NaN y range', { _rangeY: NaN }],
+    ['no x anchor', { _anchorX: undefined }],
+    ['an infinite y anchor', { _anchorY: Infinity }],
+    ['no points', { _points: undefined }],
+    ['points that are not an array', { _points: 'nope' }],
+  ];
+  for (const [name, overrides] of notReady) {
+    test(`does not draw with ${name}`, () => {
+      const plot = chartElement(overrides);
+      plot.renderGraph();
+      assert.equal(plot.shadowDOM.innerHTML, '');
+    });
+  }
+
+  test('hides the tooltip before redrawing', () => {
+    const tooltip = fakeTooltip();
+    inBrowser(() => chartElement().renderGraph(), { tooltip });
+    assert.equal(tooltip.attrs.visible, 'false');
+  });
+
+  test('wires up the reset button after each redraw', () => inBrowser(() => {
+    const plot = chartElement();
+    const button = { name: 'reset button' };
+    plot.shadowDOM.querySelector = (selector) => (selector === '.reset-view-control' ? button : null);
+    let attachedTo = null;
+    plot.attachResetControl = (control) => { attachedTo = control; };
+    plot.renderGraph();
+    assert.equal(attachedTo, button);
+  }));
+
+  test('logs the error instead of throwing when drawing fails', () => {
+    const plot = chartElement();
+    plot.generateGraph = () => { throw new Error('boom'); };
+    const logged = [];
+    const original = console.error;
+    console.error = (...args) => logged.push(args);
+    try {
+      inBrowser(() => plot.renderGraph());
+    } finally {
+      console.error = original;
+    }
+    assert.equal(logged.length, 1);
+    assert.equal(logged[0][0], 'Error rendering graph:');
+    assert.equal(plot.shadowDOM.innerHTML, '');
+  });
+
+  test('setters for the view and size store the value and redraw once', () => {
+    const redrawing = {
+      CenterOrigin: '_center_origin', AnchorX: '_anchorX', AnchorY: '_anchorY', Width: '_width',
+      Height: '_height', RangeX: '_rangeX', RangeY: '_rangeY', Ticks: '_ticks',
+    };
+    for (const [setter, field] of Object.entries(redrawing)) {
+      const plot = instanceOf('scatter-plot');
+      let redraws = 0;
+      plot.renderGraph = () => { redraws += 1; };
+      plot[setter] = 7;
+      assert.equal(plot[field], 7, setter);
+      assert.equal(redraws, 1, `${setter} should redraw once`);
+    }
+  });
+
+  test('setters for the data and labels store the value without redrawing', () => {
+    const quiet = { Points: '_points', Title: '_title', XAxisLabel: '_xAxisLabel', YAxisLabel: '_yAxisLabel' };
+    for (const [setter, field] of Object.entries(quiet)) {
+      const plot = instanceOf('scatter-plot');
+      let redraws = 0;
+      plot.renderGraph = () => { redraws += 1; };
+      plot[setter] = 'value';
+      assert.equal(plot[field], 'value', setter);
+      assert.equal(redraws, 0, `${setter} should not redraw`);
+    }
+  });
+});
+
+describe('tool-tip-modal attributes', () => {
+  function tooltipElement(innerHTML = 'ready') {
+    const el = instanceOf('tool-tip-modal');
+    const nodes = {
+      '#tooltip-x': { textContent: '' },
+      '#tooltip-y': { textContent: '' },
+      '.tooltip': {
+        style: {},
+        classList: { active: null, toggle(name, on) { this.active = on; } },
+      },
+    };
+    el.shadowDOM = { innerHTML, querySelector: (selector) => nodes[selector] };
+    const cssVariables = {};
+    el.style = { setProperty: (name, value) => { cssVariables[name] = value; } };
+    return { el, nodes, cssVariables };
+  }
+
+  test('watches the seven tooltip attributes', () => {
+    assert.deepEqual(
+      instanceOf('tool-tip-modal').constructor.observedAttributes,
+      ['x-coordinate', 'y-coordinate', 'x-position', 'y-position', 'font-size', 'font-family', 'visible'],
+    );
+  });
+
+  test('shows the coordinates formatted, including negative values', () => {
+    const { el, nodes } = tooltipElement();
+    el.attributeChangedCallback('x-coordinate', null, '1234.5678');
+    el.attributeChangedCallback('y-coordinate', null, '-5');
+    assert.equal(nodes['#tooltip-x'].textContent, '1234.57');
+    assert.equal(nodes['#tooltip-y'].textContent, '-5.00');
+  });
+
+  test('moves the tooltip with pixel positions', () => {
+    const { el, nodes } = tooltipElement();
+    el.attributeChangedCallback('x-position', null, '120.5');
+    el.attributeChangedCallback('y-position', null, '80');
+    assert.equal(nodes['.tooltip'].style.left, '120.5px');
+    assert.equal(nodes['.tooltip'].style.top, '80px');
+  });
+
+  test('is visible only when told "true"', () => {
+    const { el, nodes } = tooltipElement();
+    el.attributeChangedCallback('visible', 'false', 'true');
+    assert.equal(nodes['.tooltip'].classList.active, true);
+    el.attributeChangedCallback('visible', 'true', 'false');
+    assert.equal(nodes['.tooltip'].classList.active, false);
+    el.attributeChangedCallback('visible', 'false', 'yes');
+    assert.equal(nodes['.tooltip'].classList.active, false);
+  });
+
+  test('sets the font size and family as CSS variables', () => {
+    const { el, cssVariables } = tooltipElement();
+    el.attributeChangedCallback('font-size', null, '8.0px');
+    el.attributeChangedCallback('font-family', null, 'Georgia');
+    assert.deepEqual(cssVariables, { '--font-size': '8.0px', '--font-family': 'Georgia' });
+  });
+
+  test('ignores unchanged values, and changes made before it has been added to the page', () => {
+    const unchanged = tooltipElement();
+    unchanged.el.attributeChangedCallback('x-coordinate', '5', '5');
+    assert.equal(unchanged.nodes['#tooltip-x'].textContent, '');
+
+    const early = tooltipElement('');
+    early.el.attributeChangedCallback('x-coordinate', null, '5');
+    assert.equal(early.nodes['#tooltip-x'].textContent, '');
+  });
+
+  test('connecting builds the X and Y fields, and leaving it hides the tooltip', () => inBrowser(() => {
+    const el = instanceOf('tool-tip-modal');
+    const handlers = {};
+    el.shadowDOM = {
+      innerHTML: '',
+      querySelector: () => ({ addEventListener(type, handler) { handlers[type] = handler; } }),
+    };
+    const attributes = {};
+    el.setAttribute = (name, value) => { attributes[name] = value; };
+
+    el.connectedCallback();
+    assert.match(el.shadowDOM.innerHTML, /id="tooltip-x"/);
+    assert.match(el.shadowDOM.innerHTML, /id="tooltip-y"/);
+
+    handlers.mouseenter();
+    assert.equal(attributes.visible, undefined, 'entering the tooltip must not hide it');
+    handlers.mouseleave();
+    assert.equal(attributes.visible, 'false');
+  }));
+});
