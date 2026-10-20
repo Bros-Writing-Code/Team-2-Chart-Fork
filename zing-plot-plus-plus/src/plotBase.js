@@ -913,7 +913,8 @@ class ToolTipModal extends HTMLElement {
   formatValue(value) {
     // If the number is larger than 100,000 use scientific notation
     const num = parseFloat(value);
-    if (num > 100000 || num < 0.001 && num !== 0) {
+    const abs = Math.abs(num);
+    if (abs > 100000 || (abs < 0.001 && abs !== 0)) {
       return num.toExponential(2);
     }
     return num.toFixed(2);
