@@ -1,4 +1,4 @@
-import PlotBaseElement, { computeLayout, formatAxisNumber } from "./plotBase.js";
+import PlotBaseElement, { computeLayout, formatAxisNumber, resetButtonLayout } from "./plotBase.js";
 import { drawPoints, findPointAt } from "./canvasPoints.js";
 
 const DEFAULT_COLOR = '#3498db';
@@ -22,10 +22,21 @@ class CanvasScatterPlotElement extends PlotBaseElement {
       this._layout = computeLayout(width, height, this._center_origin, this._anchorX, this._anchorY,
         this._rangeX, this._rangeY, this._ticks);
 
+      const button = resetButtonLayout(width, height, this._layout.margin);
       const style = document.createElement('style');
+      // The reset button matches the SVG chart's: hidden until the chart is hovered or focused.
       style.textContent = `
-        :host { display: inline-block; vertical-align: top; }
-        canvas { display: block; }`;
+        :host { display: inline-block; vertical-align: top; position: relative; }
+        canvas { display: block; }
+        .reset-view-control {
+          position: absolute; left: ${button.x}px; top: ${button.y}px;
+          width: ${button.size}px; height: ${button.size}px; padding: 0;
+          background: #ffffff; border: 1px solid #999999; border-radius: 4px;
+          color: #333333; font: ${button.size * 0.65}px sans-serif; line-height: 1;
+          cursor: pointer; opacity: 0; transition: opacity 0.15s ease;
+        }
+        :host(:hover) .reset-view-control, .reset-view-control:focus { opacity: 1; }
+        .reset-view-control:hover, .reset-view-control:focus { background: #eeeeee; }`;
       const canvas = document.createElement('canvas');
       // Draw at the screen's pixel density so text and points stay sharp on HiDPI screens.
       const ratio = window.devicePixelRatio || 1;
@@ -36,7 +47,16 @@ class CanvasScatterPlotElement extends PlotBaseElement {
       // A canvas is just pixels to a screen reader, so describe the chart in words.
       canvas.setAttribute('role', 'img');
       canvas.setAttribute('aria-label', this.describe());
-      this.shadowDOM.replaceChildren(style, canvas);
+      // The reset button is a real <button> on top of the canvas, not drawn into it, so it
+      // can take keyboard focus and is left out of images from toImageCanvas().
+      const resetButton = document.createElement('button');
+      resetButton.type = 'button';
+      resetButton.className = 'reset-view-control';
+      resetButton.title = 'Reset chart view';
+      resetButton.setAttribute('aria-label', 'Reset chart view');
+      resetButton.textContent = '↺';
+      this.attachResetControl(resetButton);
+      this.shadowDOM.replaceChildren(style, canvas, resetButton);
 
       const ctx = canvas.getContext('2d');
       ctx.scale(ratio, ratio);
@@ -50,9 +70,11 @@ class CanvasScatterPlotElement extends PlotBaseElement {
   /**
    * Draws the chart again once it is on the page. Charts are often set up before they are
    * added, and the theme color (a CSS variable) can only be read after that.
+   * Also turns on zooming and panning, like the SVG chart.
    * @returns {void}
    */
   connectedCallback() {
+    this.setupViewportListeners();
     if (this._layout) {
       this.renderGraph();
     }
