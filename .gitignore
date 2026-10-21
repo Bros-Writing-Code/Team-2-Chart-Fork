@@ -29,6 +29,8 @@ build/
 .env.*.local
 
 # IDE & Editor files
+.vscode/
+.zed/
 .idea/
 *.suo
 *.ntvs*
