@@ -194,7 +194,7 @@ class CanvasScatterPlotElement extends PlotBaseElement {
   describe() {
     const count = (this._points ?? []).length;
     const axes = [this._xAxisLabel, this._yAxisLabel].filter(Boolean).join(' vs ');
-    return [this._title, `Scatter plot${axes ? ` of ${axes}` : ''}, ${count} points`]
+    return [this._title, `Scatter plot${axes ? ` of ${axes}` : ''}, ${count} ${count === 1 ? 'point' : 'points'}`]
       .filter(Boolean).join('. ');
   }
 
