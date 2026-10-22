@@ -141,3 +141,14 @@ describe('escapeXML()', () => {
       '&lt;a href=&quot;x&quot;&gt;Tom &amp; Jerry&apos;s&lt;/a&gt;');
   });
 });
+
+describe('setType()', () => {
+  test('does not render a chart by itself', () => {
+    const isolated = loadSiteScript();
+    isolated.renderChart = () => {
+      throw new Error('render should not run');
+    };
+    assert.doesNotThrow(() => isolated.setType('scatter'));
+    assert.doesNotThrow(() => isolated.setType('line'));
+  });
+});

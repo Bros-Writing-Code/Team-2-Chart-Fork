@@ -137,7 +137,7 @@ function updateForm(data) {
 
 
 
-// Synchronize both chart selectors and redraw the shared dataset.
+// Synchronize both chart selectors.
 function setType(type) {
   chartType = type;
   document.querySelectorAll("[data-type]").forEach((button) => {
@@ -152,7 +152,6 @@ function setType(type) {
     );
     button.setAttribute("aria-pressed", String(selected));
   });
-  renderChart();
 }
 
 // Parse CSV columns while supporting quoted fields and optional headers.
@@ -618,4 +617,3 @@ function renderChart() {
 
 // Initialize the controls and display the default chart after the HTML loads.
 bindEvents();
-
