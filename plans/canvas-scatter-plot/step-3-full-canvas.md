@@ -113,3 +113,13 @@ What to look for: the scatter chart matches the old one, hover shows X/Y, **Save
 | Hover checks every point | Fine at 10,000 points (well under a millisecond). Zooming with far more points (#3) may need a spatial index. |
 | `<line-plot>` is still SVG | Out of scope for this step, by team decision. |
 | Not checked in a real browser by Claude | The sandbox blocks local servers. Run the check above before merging. |
+
+## Since this step (checked 2026-10-22)
+
+| What changed later | Effect on this page |
+|---|---|
+| The npm package is now `bros-zing-plot-plus-plus`, and the site loads `@1.0.12` | Read `zing-plot-plus-plus@1.0.11` above as the version of that time. For the local check, change the `@1.0.12` tags. |
+| Responsive redesign ([ADR 0002](../../docs/adr/0002-Responsive-visual-redesign-for-website.md)) | The website no longer shrinks the app with `transform: scale(0.6)`. The CSS-scaling conversion in `setupHoverListeners()` still matters for any page that scales the chart. |
+| Zoom, pan and ↺ reset added to `PlotBaseElement` | The shadow root now also holds a `<button class="reset-view-control">` after the `<canvas>`. `connectedCallback` also turns on zoom/pan listeners. |
+| `edgeCases.test.js` added, canvas tests expanded | The library suite has 159 tests, not 35. |
+| `PlotBaseElement.renderGraph()` stopped calling `setupHoverListeners()` | The SVG chart's tooltip, which this step's hover was modelled on, currently doesn't run. The canvas tooltip is unaffected. |

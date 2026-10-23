@@ -19,6 +19,13 @@ These replace the coarser steps in [§6](#6-implementation-steps). Tests listed 
 
 > **Change from the original design (step 2).** Instead of a `renderer="canvas"` attribute on `<scatter-plot>` (§5.1), the canvas version is a **separate element, `<canvas-scatter-plot>`**, in its own file. It inherits the SVG frame from `PlotBaseElement`, so no existing file is edited and teammates can merge it without conflicts. Folding it into `<scatter-plot>` (as a `renderer` option or a replacement) is a later team decision; the rest of this plan still applies either way.
 
+> **Reading the rest of this plan today (note added 2026-10-22).** Sections 1–10 describe the code **as it was on 2026-10-16**. In particular:
+> - File/line references such as `plotBase.js:228` or `script.js:338` no longer point at those functions. Search for the function name instead (`generateGraph`, `renderGraph`, `setupHoverListeners`, `attributeChangedCallback`, `chartToCanvas`).
+> - §1 says `renderGraph()` calls `setupHoverListeners()`. That is no longer true for the SVG charts (removed in commit `4f79abe` when the zoom reset button was added), so `<scatter-plot>` and `<line-plot>` currently have no hover tooltip.
+> - There is no `renderer` attribute (§5.1, §9), no `buildHitIndex` / grid index (§5.2; hover uses the brute-force `findPointAt()`), and no `canvas.test.js` (§7.1; the tests are `canvasPoints.test.js`, `canvasScatterPlot.test.js`, `canvasScatterPlot.10k.test.js` and `edgeCases.test.js`).
+> - Open question 5 (zoom/pan) has been answered: zoom, pan and reset are built into `PlotBaseElement` for every chart.
+> - The §4b browser benchmark table has not been filled in.
+
 ---
 
 ## TL;DR
@@ -334,5 +341,6 @@ Uses a **recording fake context**: an object whose methods (`arc`, `fill`, `move
 | `PLAN.md` | This plan |
 | `step-1-draw-points.md` | What step 1 changed, its tests, and what was left for later |
 | `step-2-canvas-scatter-element.md` | What step 2 changed: the standalone `<canvas-scatter-plot>` element |
+| `step-3-full-canvas.md` | What step 3 changed: the whole scatter chart drawn on canvas |
 | `bench/node-bench.mjs` | Measures the real library's SVG build cost + canvas hit-test cost (Node, no deps) |
 | `bench/browser-bench.html` | SVG vs Canvas 2D vs WebGL render + hover timing in a real browser |

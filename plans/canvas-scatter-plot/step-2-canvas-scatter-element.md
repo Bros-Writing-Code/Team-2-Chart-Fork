@@ -3,6 +3,8 @@
 > Part of [Canvas Scatter Plot](README.md) ([full plan](PLAN.md)) · Issue #4 "SVG to Canvas"
 > Branch: `feat/canvas-draw-points`
 
+> **Superseded by [step 3](step-3-full-canvas.md).** The hybrid design described here (SVG frame + canvas points, `drawCanvasPoints()`, `applyPlotElements` returning `''`) no longer exists in the code. Today `<canvas-scatter-plot>` draws everything on one canvas. This page is kept as a record of the step.
+
 ## TL;DR
 
 Adds a new, standalone chart element, `<canvas-scatter-plot>`. It looks like `<scatter-plot>`, with the same axes, grid, title and labels, but **draws its points on a `<canvas>`** using `drawPoints()` from step 1.

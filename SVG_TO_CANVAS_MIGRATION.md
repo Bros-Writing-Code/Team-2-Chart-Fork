@@ -114,6 +114,23 @@ The website therefore uses Canvas for scatter charts without removing the librar
 
 Renderer-independent viewport behavior lives in `PlotBaseElement`. Wheel input updates the visible ranges, pointer dragging pans the viewport, and the reset control restores the initial chart bounds. Because a viewport change calls `renderGraph()`, the Canvas chart is redrawn using the new shared layout.
 
+How the pieces fit together:
+
+| Method (`plotBase.js`) | Role |
+|---|---|
+| `setupViewportListeners()` | Attaches `wheel`, `pointerdown`/`pointermove`/`pointerup` listeners **to the chart element itself** (not to the `<svg>` or `<canvas>` inside it), once. They survive every redraw because the element is never replaced. Called from `connectedCallback()`. |
+| `getMousePosition(event)` | Converts a mouse position to 0–1 coordinates inside the plot area (bottom-left = 0,0), using whichever of `canvas` / `svg` is in the shadow root. |
+| `getViewport()` / `setViewport(minX, maxX, minY, maxY)` | Read or set the visible data bounds. `setViewport` converts them back into anchor + range (respecting `centerOrigin`) and calls `renderGraph()`. |
+| `resetViewport()` | Restores the anchor/range/`centerOrigin` saved in `_initialViewport` by the last `setChartProperties(...)` call. Setters such as `RangeX` do **not** update `_initialViewport`. |
+| `attachResetControl(control)` | Makes the ↺ control respond to click, Enter and Space, and stops a press on it from starting a pan. |
+
+> **Maintenance trap:** `getMousePosition()` does not call `computeLayout()`. It repeats the margin percentages (`top 0.08`, `right 0.05`, `bottom 0.12`, `left 0.20` of the smaller side) in its own code. If the margins in `computeLayout()` change, change them in `getMousePosition()` too, or zooming and panning will be off by the difference.
+
+Two behaviors differ between the renderers because `CanvasScatterPlotElement` overrides `renderGraph()` completely instead of extending it:
+
+- The base `renderGraph()` returns early unless width, height, ranges, anchors and ticks are finite, width/height/ticks are positive, ranges are not negative and `points` is an array. The canvas version has **no such check**. With a negative range (for example, all-negative data on the website, which always anchors at 0) the SVG line chart draws nothing, while the canvas chart draws an empty frame with no ticks.
+- The base `renderGraph()` hides `#my-tooltip` and cancels the SVG tooltip animation before each redraw. The canvas version doesn't, but a pan or press already hides the tooltip in the `pointerdown` handler.
+
 ## Main Files Changed or Added
 
 | File | Migration responsibility |
@@ -144,6 +161,7 @@ node --test --test-reporter=spec
 At the time of this scan:
 
 - the library suite passes 42 tests with 0 failures;
+  - *Update 2026-10-22:* the library suite has since grown to **159 tests**, all passing: `plots.test.js` 66, `edgeCases.test.js` 51, `canvasScatterPlot.test.js` 35, `canvasPoints.test.js` 6, `canvasScatterPlot.10k.test.js` 1.
 - the website and fixture suite passes 71 tests with 0 failures;
 - the 10,000-point test confirms that all Canvas points use the same pixel positions as the SVG implementation;
 - parity tests compare Canvas grid lines, axes, ticks, titles, labels, fonts, alignment, clipping, theme color, and point placement with SVG output.
@@ -155,3 +173,9 @@ For visual verification, serve the repository over HTTP and open `zing-plot-plus
 The migration reduced a large scatter chart from thousands of retained SVG point nodes to one Canvas drawing surface while preserving the existing chart-data API, visual layout, hover tooltip, theme color, PNG export, zooming, panning, and reset behavior.
 
 The main tradeoffs are inherent to Canvas: rendered text is not selectable, individual points do not exist in the accessibility tree, and hover requires manual hit-testing. The project addresses these with a chart-level accessible description, a native reset button, and point hit-testing. SVG remains available for the existing scatter component and continues to render line charts where retained vector content is still useful.
+
+Other limitations to be aware of (as of 2026-10-22):
+
+- **The SVG charts currently have no hover tooltip.** `PlotBaseElement.setupHoverListeners()` still exists, but since the zoom reset button was added (commit `4f79abe`) the base `renderGraph()` no longer calls it. Only `<canvas-scatter-plot>`, which calls its own `setupHoverListeners()`, shows tooltips. "Preserving the hover tooltip" above therefore applies to the Canvas chart.
+- **`<canvas-scatter-plot>` is not in the package entry.** `package.json` `main` is `src/detailedPlots.js`, which does not import `canvasScatterPlot.js`; users have to load it separately.
+- **The chart does not redraw when the screen's pixel density changes** (for example, dragging the window from a Retina to a normal monitor). It stays at the old density until the next redraw.

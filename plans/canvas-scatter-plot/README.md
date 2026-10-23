@@ -2,6 +2,13 @@
 
 > Issue #4 "SVG to Canvas" · Branch `feat/canvas-draw-points` · Status: **step 3 done: whole scatter chart on canvas**
 
+> **Since step 3 (checked 2026-10-22):**
+> - The work is merged into `main` (PR #28). The finished write-up is [`SVG_TO_CANVAS_MIGRATION.md`](../../SVG_TO_CANVAS_MIGRATION.md).
+> - The npm package is now **`bros-zing-plot-plus-plus`**. The website loads `@1.0.12`; `package.json` is at `1.0.13`. Mentions of `zing-plot-plus-plus@1.0.11` below are from step 3.
+> - Zooming, panning and a ↺ reset button were added to all charts (`PlotBaseElement`), including this one. The reset button is a real `<button>` in the shadow root next to the `<canvas>`.
+> - The library suite now has **159** tests (all passing).
+> - All documents are mapped in [`DOCS_LEGEND.md`](../../DOCS_LEGEND.md).
+
 ## TL;DR
 
 Zing Plot Plus Plus draws scatter points as SVG `<circle>` elements, one per point, which gets slow with thousands of points.
@@ -101,6 +108,8 @@ Don't commit the test page. Delete it when you're done, or ignore it locally by 
  └─ <canvas role="img" aria-label="…">   everything: background, grid, axes, ticks, title, labels, points
 ```
 
+(Since the zoom work, a third child follows the canvas: `<button class="reset-view-control">↺</button>`. It is a real button so it can take keyboard focus, and it is left out of `toImageCanvas()` images.)
+
 `CanvasScatterPlotElement` extends `PlotBaseElement`, the same base class as `<scatter-plot>`, so it has the same setters and `setChartProperties(...)`:
 
 1. `renderGraph()` calls `computeLayout()` from `plotBase.js`, the same margins, scales and ticks `<scatter-plot>` uses.
@@ -150,7 +159,7 @@ cd zing-plot-plus-plus && npm test
 | `canvasScatterPlot.test.js` | Every point, grid line, axis, tick number, title and label is drawn where `<scatter-plot>` puts it. Fonts, theme color and 0.8 opacity, clipping, empty data, raw text without HTML escaping, screen-reader label. |
 | `canvasScatterPlot.10k.test.js` | All 10,000 points (the website's limit) on the same pixels as `<scatter-plot>`. Prints stats (below). |
 
-There is no browser in Node, so the tests use a **fake canvas context**: a small hand-written object that records what would be drawn. CI runs these on every push. Current result: **35 pass, 0 fail**.
+There is no browser in Node, so the tests use a **fake canvas context**: a small hand-written object that records what would be drawn. CI runs these on every push. Current result: **35 pass, 0 fail**. *(That was at step 3. As of 2026-10-22 the library suite has 159 tests, all passing; `edgeCases.test.js` was added and the canvas test file grew to 35 tests on its own.)*
 
 ### 10,000-point stats
 
@@ -170,8 +179,10 @@ Timings vary by machine, so the test reports them rather than failing on them. T
 | Limit | Effect |
 |---|---|
 | Chart text is pixels | It can't be selected or copied. Screen readers get the `aria-label` summary, not each value. |
-| Live site waits on npm | The site loads `zing-plot-plus-plus@1.0.11` from the CDN, which exists only after this reaches `main` and the publish workflow runs. |
+| Live site waits on npm | The site loads `zing-plot-plus-plus@1.0.11` from the CDN, which exists only after this reaches `main` and the publish workflow runs. *Now resolved: merged, and the site loads `bros-zing-plot-plus-plus@1.0.12`. The general rule still holds: the site only gets library changes after a publish and a bump of its script tags (see [`zing-plot-web/README.md`](../../zing-plot-web/README.md#library-version-used-by-the-site)).* |
 | Hover checks every point | Fine at 10,000. Much larger data with zoom (#3) may need a spatial index. |
+| Not in the package entry | `detailedPlots.js` (the package `main`) doesn't import `canvasScatterPlot.js`, so users must load it separately. |
+| Tooltip only on this chart | Since the zoom reset work, `<scatter-plot>` and `<line-plot>` no longer set up hover listeners, so this is the only chart with a tooltip. |
 
 ## Progress
 
@@ -202,6 +213,7 @@ It only pays off with hundreds of thousands of points or more, and it's much har
 
 **Can another issue build on this?**
 Yes. For example, zooming and scrolling (#3) could build on `<canvas-scatter-plot>`, since redrawing a canvas is cheap: change the range and call `renderGraph()`. Merge this branch, or import `canvasScatterPlot.js`.
+*(This is what happened: zoom/pan lives in `PlotBaseElement` and works on this chart. See [`SVG_TO_CANVAS_MIGRATION.md` §10](../../SVG_TO_CANVAS_MIGRATION.md#10-zoom-pan-and-reset-behavior-was-shared). The demo's feature card in `demo/canvas-features.js` still lists it as "planned".)*
 
 ## Adding the next step
 
