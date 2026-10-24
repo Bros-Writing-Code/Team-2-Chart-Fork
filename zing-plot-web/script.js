@@ -15,6 +15,9 @@ let imported = null;
 
 let prevWidth = window.innerWidth;
 let prevHeight = window.innerHeight;
+let exportBlob = null;
+let exportPreviewURL = "";
+let exportRequest = 0;
 
 // Escape user-provided text before inserting it into SVG markup.
 function escapeXML(value) {
@@ -483,37 +486,115 @@ async function chartToCanvas(chartComponent, width, height) {
   }
 }
 
-// Convert the current chart into a PNG and download it locally.
-async function handleSaveChart() {
-  const button = $("save");
-  button.disabled = true;
+function exportDimensionsFor(longEdge) {
+  const [ratioWidth, ratioHeight] = $("export-ratio").value.split(":").map(Number);
+  return ratioWidth >= ratioHeight
+    ? { width: longEdge, height: Math.round(longEdge * ratioHeight / ratioWidth) }
+    : { width: Math.round(longEdge * ratioWidth / ratioHeight), height: longEdge };
+}
+
+// Return output dimensions from the selected aspect ratio and long edge.
+function exportDimensions() {
+  return exportDimensionsFor(Number($("export-resolution").value));
+}
+
+function updateResolutionOptions() {
+  $("export-resolution").querySelectorAll("option").forEach((option) => {
+    const { width, height } = exportDimensionsFor(Number(option.value));
+    option.textContent = `${width} × ${height} px`;
+  });
+}
+
+function clearExportPreview() {
+  exportRequest++;
+  exportBlob = null;
+  if (exportPreviewURL) URL.revokeObjectURL(exportPreviewURL);
+  exportPreviewURL = "";
+  $("export-preview").removeAttribute("src");
+}
+
+// Re-render the current data with the SVG chart components for vector export.
+function chartToSVG(chartComponent, width, height) {
+  const svgChart = document.createElement(
+    chartType === "line" ? "line-plot" : "scatter-plot"
+  );
+  svgChart.setChartProperties(
+    {
+      title: dataset.title,
+      "x-axis-label": dataset.xLabel,
+      "y-axis-label": dataset.yLabel,
+      points: dataset.x.map((x, i) => ({ coordinate: [x, dataset.y[i]] })),
+    },
+    width,
+    height,
+    chartComponent._center_origin,
+    chartComponent._anchorX,
+    chartComponent._anchorY,
+    chartComponent._rangeX,
+    chartComponent._rangeY,
+    chartComponent._ticks
+  );
+  const svg = svgChart.shadowRoot.querySelector("svg").cloneNode(true);
+  svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  return new XMLSerializer().serializeToString(svg);
+}
+
+async function chartToPNG(chartComponent, width, height) {
+  const canvas = await chartToCanvas(chartComponent, width, height);
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+}
+
+async function refreshExportPreview() {
+  const { width, height } = exportDimensions();
+  const format = $("export-format").value;
+  const request = ++exportRequest;
+  const download = $("export-download");
+  download.disabled = true;
+
   try {
-    // BACKEND HOOK: add cloud storage or a server export request here.
-    const chartComponent = $("chart");
-    const canvas = await chartToCanvas(chartComponent, 1268, 1420);
-    const blob = await new Promise((resolve) => {
-      canvas.toBlob(resolve, "image/png");
-    });
+    const blob = format === "svg"
+      ? new Blob([chartToSVG($("chart"), width, height)], { type: "image/svg+xml" })
+      : await chartToPNG($("chart"), width, height);
     if (!blob) {
       throw new Error("Unable to create the image.");
     }
-    const downloadURL = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = downloadURL;
-    link.download = (
-      dataset.title.replace(/[^\p{L}\p{N}\- _]/gu, "") ||
-      "chart"
-    ) + ".png";
-    link.click();
-    setTimeout(() => {
-      URL.revokeObjectURL(downloadURL);
-    }, 2000);
-    notify("Chart saved as PNG.");
+    const previewURL = URL.createObjectURL(blob);
+    if (request !== exportRequest) {
+      URL.revokeObjectURL(previewURL);
+      return;
+    }
+    if (exportPreviewURL) URL.revokeObjectURL(exportPreviewURL);
+    exportBlob = blob;
+    exportPreviewURL = previewURL;
+    $("export-preview").src = previewURL;
+    download.disabled = false;
   } catch (error) {
-    notify("Could not save the chart. Please try again.", true);
-  } finally {
-    button.disabled = false;
+    if (request === exportRequest) {
+      notify("Unable to create the export preview.", true);
+    }
   }
+}
+
+async function handleSaveChart() {
+  const dialog = $("export-dialog");
+  if (!dialog.open) dialog.showModal();
+  clearExportPreview();
+  await refreshExportPreview();
+}
+
+function handleDownloadChart() {
+  if (!exportBlob) return;
+  const downloadURL = URL.createObjectURL(exportBlob);
+  const link = document.createElement("a");
+  link.href = downloadURL;
+  link.download = (
+    dataset.title.replace(/[^\p{L}\p{N}\- _]/gu, "") ||
+    "chart"
+  ) + `.${$("export-format").value}`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(downloadURL), 2000);
+  $("export-dialog").close();
+  notify(`Chart saved as ${$("export-format").value.toUpperCase()}.`);
 }
 
 // Register UI event listeners here when adding new buttons or interactions.
@@ -532,6 +613,17 @@ function bindEvents() {
     "click",
     handleSaveChart
   );
+  updateResolutionOptions();
+  $("export-format").addEventListener("change", refreshExportPreview);
+  $("export-ratio").addEventListener("change", () => {
+    updateResolutionOptions();
+    refreshExportPreview();
+  });
+  $("export-resolution").addEventListener("change", refreshExportPreview);
+  $("export-download").addEventListener("click", handleDownloadChart);
+  $("export-close").addEventListener("click", () => $("export-dialog").close());
+  $("export-cancel").addEventListener("click", () => $("export-dialog").close());
+  $("export-dialog").addEventListener("close", clearExportPreview);
   // Open the native file picker from the Choose File button.
   $("choose-file").addEventListener("click", (event) => {
     event.stopPropagation();

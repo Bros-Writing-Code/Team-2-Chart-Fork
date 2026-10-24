@@ -10,8 +10,8 @@
 
     <title>Zing Plot Plus Plus</title>
 
-    <link rel="stylesheet" href="./style.css?v=3" />
-    <script src="script.js" defer></script>
+    <link rel="stylesheet" href="./style.css?v=5" />
+    <script src="script.js?v=2" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/bros-zing-plot-plus-plus@1.0.12/src/detailedPlots.js" type="module" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/bros-zing-plot-plus-plus@1.0.12/src/canvasScatterPlot.js" type="module" defer></script>
 
@@ -302,5 +302,55 @@
         </section>
       </div>
     </main>
+
+    <dialog id="export-dialog" class="export-dialog" aria-labelledby="export-title">
+      <div class="export-dialog-content">
+        <div class="export-dialog-header">
+          <div>
+            <h2 id="export-title">Export Preview</h2>
+            <p>Choose an image size before downloading.</p>
+          </div>
+          <button type="button" id="export-close" class="export-close" aria-label="Close export preview">×</button>
+        </div>
+
+        <div class="export-controls">
+          <label for="export-resolution">Resolution
+            <select id="export-resolution">
+              <option value="1280">1280 × 960 px</option>
+              <option value="1920" selected>1920 × 1440 px</option>
+              <option value="2560">2560 × 1920 px</option>
+              <option value="3840">3840 × 2880 px</option>
+            </select>
+          </label>
+          <label for="export-ratio">Aspect ratio
+            <select id="export-ratio">
+              <option value="1:1">1:1 Square</option>
+              <option value="4:3" selected>4:3 Standard</option>
+              <option value="16:9">16:9 Widescreen</option>
+              <option value="3:4">3:4 Portrait</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="export-preview-frame">
+          <img id="export-preview" alt="Chart export preview" />
+        </div>
+
+        <div class="export-footer">
+          <div class="export-option">
+            <label for="export-format">Format
+              <select id="export-format">
+                <option value="png" selected>PNG</option>
+                <option value="svg">SVG</option>
+              </select>
+            </label>
+          </div>
+          <div class="export-actions">
+            <button type="button" id="export-cancel">Cancel</button>
+            <button type="button" id="export-download" class="save">Download</button>
+          </div>
+        </div>
+      </div>
+    </dialog>
   </body>
 </html>
