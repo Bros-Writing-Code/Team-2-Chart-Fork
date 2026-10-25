@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-10-25
-- **Scope:** `zing-plot-plus-plus` and `zing-plot-web` (website demo mode only; the main version is unchanged)
+- **Scope:** `zing-plot-web` (demo mode only; the library and the main version are unchanged)
 
 ## Context
 
