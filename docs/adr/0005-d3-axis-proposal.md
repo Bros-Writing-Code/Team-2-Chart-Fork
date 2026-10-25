@@ -14,15 +14,15 @@
 
 ## Decisions
 
-1. **Propose d3-axis for the line plot only.** The scatter plot keeps drawing its own axes on the canvas, using tick values from d3-scale.
-2. **Show it in the same demo version of the website** as ADR 0004. With `?demo=d3`, the line plot uses d3-scale and d3-axis, and the scatter plot uses d3-scale only.
-3. **Match the current look.** The D3 axes use the same fonts, sizes and colors as our current chart, so any difference in the demo comes from D3 and not from styling.
+1. **Use d3-axis for the line plot only.** The scatter plot is drawn on a canvas, where d3-axis can't draw, so it keeps drawing its own axes using tick numbers from d3-scale.
+2. **Show it in the same demo as ADR 0004.** With `?demo=d3`, the line plot uses d3-scale and d3-axis, and the scatter plot uses d3-scale only.
+3. **Keep the current look.** The D3 axes use the same fonts, sizes and colors as our current chart, so any difference you see comes from D3, not from styling.
 
 ## Consequences
 
-1. **Less axis-drawing code for the line plot, if adopted.** Our hand-written axis and grid drawing would be replaced by two D3 calls.
-2. **Two different ways of drawing axes.** The line plot would use d3-axis and the scatter plot would keep its own canvas code, so axis style changes would need to be made in both places.
-3. **One more dependency.** d3-axis needs D3's selection module to draw on the page, so the line plot would rely on three D3 modules instead of one.
-4. **The demo draws the tick numbers and grid lines twice.** It draws ours first and then replaces them with D3's. This is fine for a demo, but adopting it for real would mean changing how the line plot is built.
-5. **Harder to test.** Our tests can check which tick values the axis uses, but not the drawn axis itself, because the tests do not run in a real browser. The drawn result has to be checked by eye in the demo version of the website.
-6. **Only useful if ADR 0004 is accepted.**
+1. **Less axis code for the line plot, if adopted.** Our hand-written tick numbers and grid lines would be replaced by two D3 calls.
+2. **Two ways of drawing axes.** The line plot would use d3-axis and the scatter plot would keep its own canvas code. Changing how axes look would mean updating both.
+3. **More D3 to download.** d3-axis also needs D3's selection module, so the line plot would use three D3 modules instead of just d3-scale.
+4. **The demo draws tick numbers and grid lines twice.** It draws ours first, then replaces them with D3's. That's fine for a demo, but using it for real would mean changing how the line plot is built.
+5. **Harder to test.** Our tests can check which tick numbers the axis uses, but not how the axis looks, because the tests don't run in a browser. The look has to be checked by eye with `?demo=d3`.
+6. **Only useful if ADR 0004 (d3-scale) is accepted.**
