@@ -1,4 +1,4 @@
-# ADR 0003: Use d3-scale for chart scales and ticks
+# ADR 0004: Use d3-scale for chart scales and ticks
 
 - **Status:** Proposed
 - **Date:** 2026-10-25
@@ -26,4 +26,4 @@
 3. **Tick numbers may differ slightly.** D3 picks ticks using almost the same rule as our code, but a few data ranges will get a different number of ticks. This can be checked by opening the same data with and without `?demo=d3`.
 4. **We would depend on an outside library** loading from a CDN.
 5. **Testing needs a team decision.** Our tests can't load D3 from a CDN. The demo tests work around this without installing D3, but adopting d3-scale for real would mean adding it as a package and an install step to our CI tests.
-6. **The D3 chart versions are published with the library** (version 1.1.0) so the demo link works on the live site. They are not used unless the demo link is opened.
+6. **The D3 chart versions are published with the library** (version 1.0.14) so the demo link works on the live site. They are not used unless the demo link is opened.

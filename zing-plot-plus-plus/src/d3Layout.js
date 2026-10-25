@@ -3,7 +3,7 @@ import { computeLayout } from "./plotBase.js";
 /**
  * Works out the chart layout like computeLayout(), but with D3 scales and ticks.
  * Margins and sizes are the same; only scaleX, scaleY, xTicks and yTicks come from D3.
- * Used by the D3 chart versions in d3Plots.js (see docs/adr/0003-d3-scale-proposal.md).
+ * Used by the D3 chart versions in d3Plots.js (see docs/adr/0004-d3-scale-proposal.md).
  * @param {function} scaleLinear - d3.scaleLinear. Passed in so this file needs no internet import and can be tested in Node.
  * @param {number} x - Width of the component
  * @param {number} y - Height of the component

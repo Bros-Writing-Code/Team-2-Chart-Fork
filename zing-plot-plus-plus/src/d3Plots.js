@@ -7,7 +7,7 @@ import CanvasScatterPlotElement from "./canvasScatterPlot.js";
 import { computeD3Layout } from "./d3Layout.js";
 
 // D3 versions of the website's charts, used only in its ?demo=d3 mode.
-// See docs/adr/0003-d3-scale-proposal.md and docs/adr/0004-d3-axis-proposal.md.
+// See docs/adr/0004-d3-scale-proposal.md and docs/adr/0005-d3-axis-proposal.md.
 
 /**
  * <canvas-scatter-plot> with its scales and ticks worked out by d3-scale.
