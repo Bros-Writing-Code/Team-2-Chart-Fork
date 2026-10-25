@@ -25,5 +25,5 @@
 2. **New features become easy.** D3 can convert the mouse position back into a data value, which our zoom and pan code currently works out by hand. It also supports log scales, which would make log axes a small change.
 3. **Tick numbers may differ slightly.** D3 picks ticks using almost the same rule as our code, but a few data ranges will get a different number of ticks. This can be checked by opening the same data with and without `?demo=d3`.
 4. **We would depend on an outside library** loading from a CDN.
-5. **Testing needs a team decision.** Our tests can't load D3 from a CDN. The demo tests work around this without installing D3, but adopting d3-scale for real would mean adding it as a package and an install step to our CI tests.
-6. **The demo needs no new library version.** It lives in the website, so it works on any laptop from this branch and on the live site as soon as it is merged. It is not used unless the demo link is opened.
+5. **Testing needs a team decision.** Our tests can't load D3 from a CDN, so the demo tests use a simple stand-in for D3. Adopting d3-scale for real would mean adding it as a package and an install step to our CI tests.
+6. **The demo needs no new library version.** It lives in the website, so it works as soon as it is merged, without waiting for a library release. It is not used unless the demo link is opened.
