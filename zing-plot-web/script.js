@@ -462,6 +462,7 @@ async function chartToCanvas(chartComponent, width, height) {
   svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
   svg.setAttribute("width", String(width));
   svg.setAttribute("height", String(height));
+  svg.setAttribute("preserveAspectRatio", "none");
   const markup = new XMLSerializer().serializeToString(svg);
   const svgURL = URL.createObjectURL(
     new Blob(
@@ -479,7 +480,10 @@ async function chartToCanvas(chartComponent, width, height) {
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
-    canvas.getContext("2d").drawImage(image, 0, 0);
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#fff";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
     return canvas;
   } finally {
     URL.revokeObjectURL(svgURL);
@@ -495,7 +499,10 @@ function exportDimensionsFor(longEdge) {
 
 // Return output dimensions from the selected aspect ratio and long edge.
 function exportDimensions() {
-  return exportDimensionsFor(Number($("export-resolution").value));
+  const longEdge = $("export-format").value === "svg"
+    ? 1920
+    : Number($("export-resolution").value);
+  return exportDimensionsFor(longEdge);
 }
 
 function updateResolutionOptions() {
@@ -513,12 +520,9 @@ function clearExportPreview() {
   $("export-preview").removeAttribute("src");
 }
 
-// Re-render the current data with the SVG chart components for vector export.
-function chartToSVG(chartComponent, width, height) {
-  const svgChart = document.createElement(
-    chartType === "line" ? "line-plot" : "scatter-plot"
-  );
-  svgChart.setChartProperties(
+function createExportChart(tagName, chartComponent, width, height) {
+  const chart = document.createElement(tagName);
+  chart.setChartProperties(
     {
       title: dataset.title,
       "x-axis-label": dataset.xLabel,
@@ -534,13 +538,33 @@ function chartToSVG(chartComponent, width, height) {
     chartComponent._rangeY,
     chartComponent._ticks
   );
+  return chart;
+}
+
+// Re-render the current data with the SVG chart components for vector export.
+function chartToSVG(chartComponent, width, height) {
+  const svgChart = createExportChart(
+    chartType === "line" ? "line-plot" : "scatter-plot",
+    chartComponent,
+    width,
+    height
+  );
   const svg = svgChart.shadowRoot.querySelector("svg").cloneNode(true);
   svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  svg.setAttribute("width", String(width));
+  svg.setAttribute("height", String(height));
+  svg.setAttribute("preserveAspectRatio", "none");
   return new XMLSerializer().serializeToString(svg);
 }
 
 async function chartToPNG(chartComponent, width, height) {
-  const canvas = await chartToCanvas(chartComponent, width, height);
+  const pngChart = createExportChart(
+    chartType === "line" ? "line-plot" : "canvas-scatter-plot",
+    chartComponent,
+    width,
+    height
+  );
+  const canvas = await chartToCanvas(pngChart, width, height);
   return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
 }
 
@@ -614,7 +638,13 @@ function bindEvents() {
     handleSaveChart
   );
   updateResolutionOptions();
-  $("export-format").addEventListener("change", refreshExportPreview);
+  $("export-format").addEventListener("change", () => {
+    const svg = $("export-format").value === "svg";
+    $("export-resolution").closest("label").hidden = svg;
+    document.querySelector(".export-controls").classList.toggle("svg-export", svg);
+    $("svg-export-note").hidden = !svg;
+    refreshExportPreview();
+  });
   $("export-ratio").addEventListener("change", () => {
     updateResolutionOptions();
     refreshExportPreview();
