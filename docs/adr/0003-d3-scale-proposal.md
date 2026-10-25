@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-10-25
-- **Scope:** `zing-plot-plus-plus` (comparison demo plus one small library hook; the website is unchanged)
+- **Scope:** `zing-plot-plus-plus` and `zing-plot-web` (D3 chart versions shown only in the website's demo mode; the main version is unchanged)
 
 ## Context
 
@@ -14,15 +14,16 @@
 ## Decisions
 
 1. **Propose d3-scale for both charts.** It would replace our hand-written scale and tick math. The drawing code would not need to change, because a D3 scale is used the same way as our current one.
-2. **Build a side-by-side demo first.** A comparison page shows the current charts next to D3 versions using the same data. The real charts are not switched over by this proposal.
-3. **Add one small hook to the library.** The charts get their layout through a method that the demo versions can override. This lets the demo reuse all of the real drawing code and swap only the math. The current charts behave exactly as before.
+2. **Build a demo version of the website first.** Opening the website with `?demo=d3` at the end of the link draws the charts with D3. The normal link is unchanged, so the team can try both with the same data. The main version is not switched over by this proposal.
+3. **Add one small hook to the library.** The charts get their layout through a method that the D3 versions can override. This lets them reuse all of the real drawing code and swap only the math. The current charts behave exactly as before.
 4. **Keep our own tick label formatting.** Our formatter already switches to scientific notation for very large and very small numbers, which D3 does not do by default.
-5. **Load D3 from a CDN with a fixed version in the demo**, the same way the website loads our library.
+5. **Load D3 from a CDN with a fixed version, only in demo mode**, the same way the website loads our library. Normal visitors never download D3.
 
 ## Consequences
 
 1. **Less custom math to maintain, if adopted.** Our tick-picking function and scale formulas (roughly 40 lines) could be replaced with D3 calls.
 2. **New features become easy.** D3 can convert the mouse position back into a data value, which our zoom and pan code currently works out by hand. It also supports log scales, which would make log axes a small change.
-3. **Tick numbers may differ slightly.** D3 picks ticks using almost the same rule as our code, but a few data ranges will get a different number of ticks. The demo includes data that shows this.
+3. **Tick numbers may differ slightly.** D3 picks ticks using almost the same rule as our code, but a few data ranges will get a different number of ticks. This can be checked by opening the same data with and without `?demo=d3`.
 4. **We would depend on an outside library** loading from a CDN.
 5. **Testing needs a team decision.** Our tests can't load D3 from a CDN. The demo tests work around this without installing D3, but adopting d3-scale for real would mean adding it as a package and an install step to our CI tests.
+6. **The D3 chart versions are published with the library** (version 1.1.0) so the demo link works on the live site. They are not used unless the demo link is opened.
