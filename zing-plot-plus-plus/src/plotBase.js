@@ -626,7 +626,7 @@ class PlotBaseElement extends HTMLElement {
 
   /**
    * Works out where everything goes on the chart: margins, sizes, scales and ticks.
-   * Subclasses can override this to swap in different scales (see the d3-scale demo).
+   * Subclasses can override this to swap in different scales (see d3Plots.js).
    * Takes the same arguments as computeLayout().
    * @returns {object} - The layout, in the same shape computeLayout() returns.
    */
