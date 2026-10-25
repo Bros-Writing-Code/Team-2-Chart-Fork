@@ -1,4 +1,4 @@
-import PlotBaseElement, { computeLayout, formatAxisNumber, resetButtonLayout } from "./plotBase.js";
+import PlotBaseElement, { formatAxisNumber, resetButtonLayout } from "./plotBase.js";
 import { drawPoints, findPointAt } from "./canvasPoints.js";
 
 const DEFAULT_COLOR = '#3498db';
@@ -19,7 +19,7 @@ class CanvasScatterPlotElement extends PlotBaseElement {
     try {
       const width = this._width;
       const height = this._height;
-      this._layout = computeLayout(width, height, this._center_origin, this._anchorX, this._anchorY,
+      this._layout = this.getLayout(width, height, this._center_origin, this._anchorX, this._anchorY,
         this._rangeX, this._rangeY, this._ticks);
 
       const button = resetButtonLayout(width, height, this._layout.margin);
