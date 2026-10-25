@@ -625,16 +625,6 @@ class PlotBaseElement extends HTMLElement {
   }
 
   /**
-   * Works out where everything goes on the chart: margins, sizes, scales and ticks.
-   * Subclasses can override this to swap in different scales (see d3Plots.js).
-   * Takes the same arguments as computeLayout().
-   * @returns {object} - The layout, in the same shape computeLayout() returns.
-   */
-  getLayout(x, y, center, centerx, centery, rangeX, rangeY, ticks) {
-    return computeLayout(x, y, center, centerx, centery, rangeX, rangeY, ticks);
-  }
-
-  /**
    * Generates a graph base and outputs it in an SVG HTML object.
    * 
    * @param {ChartData} chartData - JSON object following the chart format
@@ -651,7 +641,7 @@ class PlotBaseElement extends HTMLElement {
 
   generateGraph(chartData, x, y, center, centerx, centery, rangeX, rangeY, ticks) {
     const { margin, sizes, scaleX, scaleY, xTicks, yTicks } =
-      this.getLayout(x, y, center, centerx, centery, rangeX, rangeY, ticks);
+      computeLayout(x, y, center, centerx, centery, rangeX, rangeY, ticks);
 
     // build svg, check style for possible customization, using class tags for simplicity
     let svg = `<svg width="${x}" height="${y}" viewBox="0 0 ${x} ${y}" xmlns="http://www.w3.org/2000/svg">

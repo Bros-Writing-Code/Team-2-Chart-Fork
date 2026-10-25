@@ -39,5 +39,3 @@ class LinePlotElement extends PlotBaseElement {
 
 customElements.define('scatter-plot', ScatterPlotElement);
 customElements.define('line-plot', LinePlotElement);
-
-export { ScatterPlotElement, LinePlotElement };
