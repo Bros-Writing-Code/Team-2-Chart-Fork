@@ -7,8 +7,8 @@
 ## Context
 
 - The original Save button downloaded a PNG immediately. Users could not check the image before saving.
-- Users can't choose its aspect ratio, size, or file type. This made it easy to download the wrong image.
-- Do not support SVG export.
+- Users can't choose its aspect ratio, size, or file type. This left something to be desired.
+- Download does not support SVG export.
 
 ## Decisions
 
