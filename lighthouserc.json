@@ -4,8 +4,7 @@
       "staticDistDir": ".",
       "url": [
         "http://localhost/zing-plot-web/index.html",
-        "http://localhost/zing-plot-plus-plus/demo/demo.html",
-        "http://localhost/zing-plot-plus-plus/demo/canvas-vs-svg.html"
+        "http://localhost/zing-plot-plus-plus/demo/demo.html"
       ],
       "numberOfRuns": 3,
       "settings": { "preset": "desktop" }

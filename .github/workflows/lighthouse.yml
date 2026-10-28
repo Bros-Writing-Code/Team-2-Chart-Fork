@@ -1,8 +1,8 @@
 name: "Lighthouse"
 
-# Audits the website and the library's demo pages with Lighthouse CI (lighthouserc.json).
+# Audits the website and the library's demo page with Lighthouse CI (lighthouserc.json).
 # The website loads the published library from the CDN, so its scores track changes to
-# zing-plot-web; the demo pages load ../src, so theirs track changes to the library.
+# zing-plot-web; the demo page loads ../src, so its scores track changes to the library.
 # Fails if performance, accessibility or best practices drop below 90 on any page.
 # Scores go to the run's summary page and full HTML reports are uploaded as an artifact.
 on:
