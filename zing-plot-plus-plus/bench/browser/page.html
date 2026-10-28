@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>zing-plot browser bench</title></head>
+<body>
+<div id="host"></div>
+<script type="module">
+// Loaded by run.mjs, which serves the src/ folder being measured at ./src/.
+// Each measurement is synchronous and forces the browser to finish the work:
+//   SVG    -> setChartProperties (innerHTML parse) + forced style and layout
+//   Canvas -> setChartProperties (draw calls) + reading one pixel back, which waits for drawing
+// Painting to the screen is not included, so SVG's numbers are on the generous side.
+const host = document.getElementById('host');
+const has = {};
+for (const file of ['detailedPlots.js', 'canvasScatterPlot.js']) {
+  try {
+    await import(`./src/${file}`);
+    has[file] = true;
+  } catch {
+    // An older version of the library may not have this file.
+  }
+}
+
+function makeChartData(n) {
+  let seed = 42;
+  const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const points = Array.from({ length: n }, () => ({ coordinate: [random() * 10, random() * 10] }));
+  return { title: 'T', 'x-axis-label': 'X', 'y-axis-label': 'Y', points };
+}
+
+function flush(el) {
+  const canvas = el.shadowRoot.querySelector('canvas');
+  if (canvas) canvas.getContext('2d').getImageData(0, 0, 1, 1);
+  else el.shadowRoot.querySelector('svg').getBoundingClientRect();
+}
+
+function median(times) {
+  times.sort((a, b) => a - b);
+  return times[Math.floor(times.length / 2)];
+}
+
+const WARMUP = 3;
+const SAMPLES = 15;
+
+/**
+ * Times two things for a chart type: drawing it from scratch, and redrawing it after a
+ * zoom (setViewport, which is what the mouse wheel calls). Returns median ms for each.
+ */
+function measure(tag, n) {
+  const data = makeChartData(n);
+  const render = [];
+  const zoom = [];
+  for (let i = 0; i < WARMUP + SAMPLES; i++) {
+    const el = document.createElement(tag);
+    host.replaceChildren(el);
+    let start = performance.now();
+    el.setChartProperties(data, 500, 400, false, 0, 0, 10, 10, 5);
+    flush(el);
+    const renderMs = performance.now() - start;
+    start = performance.now();
+    el.setViewport(2, 8, 2, 8);
+    flush(el);
+    const zoomMs = performance.now() - start;
+    if (i >= WARMUP) {
+      render.push(renderMs);
+      zoom.push(zoomMs);
+    }
+  }
+  host.replaceChildren();
+  return { render: median(render), zoom: median(zoom) };
+}
+
+window.runBenchmarks = (sizes) => {
+  const charts = [];
+  if (has['detailedPlots.js']) charts.push('scatter-plot', 'line-plot');
+  if (has['canvasScatterPlot.js']) charts.push('canvas-scatter-plot');
+  const results = {};
+  for (const n of sizes) {
+    for (const tag of charts) {
+      try {
+        const { render, zoom } = measure(tag, n);
+        results[`${tag} render, ${n} points`] = render;
+        results[`${tag} zoom redraw, ${n} points`] = zoom;
+      } catch (err) {
+        // An older version of the library may have a different API; skip rather than fail.
+        console.error(`skipped ${tag}, ${n} points: ${err.message}`);
+      }
+    }
+  }
+  return results;
+};
+window.ready = true;
+</script>
+</body>
+</html>
