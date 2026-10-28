@@ -38,3 +38,6 @@ build/
 *.sln
 *.swp
 *.swo
+
+# Lighthouse CI
+.lighthouseci/
