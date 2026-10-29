@@ -1,0 +1,97 @@
+name: "Performance"
+
+# Benchmarks the library on this branch and on the branch it targets, on the same
+# machine in the same job, and fails if anything got much slower. Results show up in
+# the run's summary page. Two jobs run side by side:
+#   node    - our own code in Node with a fake canvas; no npm install needed
+#   browser - the real chart elements in headless Chromium, via Playwright
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
+
+jobs:
+  node:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check out base branch
+        run: git worktree add "$RUNNER_TEMP/base" "origin/$BASE_REF"
+      # Base and head take turns so a slow patch on the shared runner hits both sides.
+      - name: Run benchmarks
+        working-directory: ./zing-plot-plus-plus
+        run: |
+          mkdir -p "$RUNNER_TEMP/perf"
+          for i in 1 2 3; do
+            node bench/run.mjs --src "$RUNNER_TEMP/base/zing-plot-plus-plus/src" --out "$RUNNER_TEMP/perf/base-$i.json"
+            node bench/run.mjs --out "$RUNNER_TEMP/perf/head-$i.json"
+          done
+      - name: Compare with base
+        working-directory: ./zing-plot-plus-plus
+        run: |
+          node bench/compare.mjs --title "Node benchmarks" \
+            --base "$RUNNER_TEMP/perf/base-1.json,$RUNNER_TEMP/perf/base-2.json,$RUNNER_TEMP/perf/base-3.json" \
+            --head "$RUNNER_TEMP/perf/head-1.json,$RUNNER_TEMP/perf/head-2.json,$RUNNER_TEMP/perf/head-3.json" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-benchmark-results
+          path: ${{ runner.temp }}/perf
+
+  browser:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: zing-plot-plus-plus/bench/browser/package-lock.json
+      - name: Install Playwright and Chromium
+        working-directory: ./zing-plot-plus-plus/bench/browser
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium-headless-shell
+      - name: Check out base branch
+        run: git worktree add "$RUNNER_TEMP/base" "origin/$BASE_REF"
+      - name: Run benchmarks
+        working-directory: ./zing-plot-plus-plus/bench/browser
+        run: |
+          mkdir -p "$RUNNER_TEMP/perf"
+          for i in 1 2 3; do
+            node run.mjs --src "$RUNNER_TEMP/base/zing-plot-plus-plus/src" --out "$RUNNER_TEMP/perf/base-$i.json"
+            node run.mjs --out "$RUNNER_TEMP/perf/head-$i.json"
+          done
+      - name: Compare with base
+        working-directory: ./zing-plot-plus-plus
+        run: |
+          node bench/compare.mjs --title "Browser benchmarks" \
+            --base "$RUNNER_TEMP/perf/base-1.json,$RUNNER_TEMP/perf/base-2.json,$RUNNER_TEMP/perf/base-3.json" \
+            --head "$RUNNER_TEMP/perf/head-1.json,$RUNNER_TEMP/perf/head-2.json,$RUNNER_TEMP/perf/head-3.json" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-benchmark-results
+          path: ${{ runner.temp }}/perf

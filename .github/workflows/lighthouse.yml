@@ -1,0 +1,53 @@
+name: "Lighthouse"
+
+# Audits the website and the library's demo page with Lighthouse CI (lighthouserc.json).
+# The website loads the published library from the CDN, so its scores track changes to
+# zing-plot-web; the demo page loads ../src, so its scores track changes to the library.
+# Fails if performance, accessibility or best practices drop below 90 on any page.
+# Scores go to the run's summary page and full HTML reports are uploaded as an artifact.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # Uses the Google Chrome that comes with the runner.
+      - name: Run Lighthouse CI
+        run: npx -y @lhci/cli@0.15.1 autorun
+      - name: Write summary
+        if: always()
+        run: |
+          node --input-type=module <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import { existsSync, readFileSync } from 'node:fs';
+          const file = '.lighthouseci/reports/manifest.json';
+          if (!existsSync(file)) process.exit(0);
+          const runs = JSON.parse(readFileSync(file, 'utf8')).filter((run) => run.isRepresentativeRun);
+          const pct = (score) => (score == null ? '—' : Math.round(score * 100));
+          console.log('## Lighthouse scores\n');
+          console.log('| Page | Performance | Accessibility | Best practices | SEO |');
+          console.log('| --- | ---: | ---: | ---: | ---: |');
+          for (const { url, summary: s } of runs) {
+            const page = new URL(url).pathname.slice(1);
+            console.log(`| ${page} | ${pct(s.performance)} | ${pct(s.accessibility)} | ${pct(s['best-practices'])} | ${pct(s.seo)} |`);
+          }
+          console.log('\n<sub>Desktop preset, median of 3 runs. Full reports are in the lighthouse-reports artifact.</sub>');
+          EOF
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci
+          include-hidden-files: true

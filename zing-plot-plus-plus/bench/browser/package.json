@@ -1,0 +1,12 @@
+{
+  "name": "zing-plot-browser-bench",
+  "private": true,
+  "description": "Browser benchmarks for zing-plot-plus-plus. Kept separate so the library stays dependency-free.",
+  "type": "module",
+  "scripts": {
+    "bench": "node run.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.64.0"
+  }
+}
