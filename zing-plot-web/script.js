@@ -19,6 +19,13 @@ let exportBlob = null;
 let exportPreviewURL = "";
 let exportRequest = 0;
 
+// True when the page was opened with ?demo=d3, which draws the charts with D3 instead.
+// See docs/adr/0004-d3-scale-proposal.md and docs/adr/0005-d3-axis-proposal.md.
+function isD3Demo(search) {
+  return /[?&]demo=d3(&|$)/.test(search);
+}
+const D3_DEMO = isD3Demo(window.location.search);
+
 // Escape user-provided text before inserting it into SVG markup.
 function escapeXML(value) {
   const entities = {
@@ -703,6 +710,14 @@ window.addEventListener("resize", () => {
 
 
 function renderChart() {
+  // In demo mode, load the D3 charts from the website folder first, then draw.
+  if (D3_DEMO && !customElements.get("d3-line-plot")) {
+    import("./d3Plots.js").then(renderChart, (error) => {
+      console.error("Error loading D3 charts:", error);
+      notify("Could not load the D3 demo charts.", true);
+    });
+    return;
+  }
   try {
     let chart;
     const chartContainer = document.querySelector('.chart-container');
@@ -715,9 +730,9 @@ function renderChart() {
     const containerWidth = chartContainer.offsetWidth;
     const containerHeight = chartContainer.offsetHeight;
     if (chartType === "line") {
-      chart = document.createElement('line-plot');
+      chart = document.createElement(D3_DEMO ? 'd3-line-plot' : 'line-plot');
     } else {
-      chart = document.createElement('canvas-scatter-plot');
+      chart = document.createElement(D3_DEMO ? 'd3-canvas-scatter-plot' : 'canvas-scatter-plot');
     }
     chart.setChartProperties({
       "title": dataset.title,
